@@ -134,6 +134,19 @@ docs/
   design.md       # architecture & design
 ```
 
+## Roadmap & Upcoming Slices (`v0.3.0`)
+
+Oride follows a strict **lean, contained, and fail-closed** philosophy. The next planned slices include:
+
+- [ ] **Smart Delimiter Auto-Pairing:** Automatic insertion and wrapping of brackets (`()`, `[]`, `{}`) and quotes (`""`, `''`).
+- [ ] **Modal Text Objects:** Expansion of Vim-style motion text objects (`ci(`, `da"`, `yiw`).
+- [ ] **Git Hunk Staging:** Interactive patch/hunk staging within the SCM panel (`git add -p` style).
+- [ ] **LSP Code Navigation:** Symbol outline / breadcrumbs picker and basic snippet expansion.
+- [ ] **PTY Scrollback History:** Navigable scrollback buffer for the embedded terminal panel.
+- [ ] **Tree-Sitter Expansion:** Streamlined pluggable grammar bindings for additional systems and scripting languages.
+
+> For detailed technical specifications, architectural DAGs, and out-of-scope boundaries, check out the [Roadmap Specification](docs/en/planning/alpha6-roadmap.md).
+
 ## Contributing
 
 Contributions are warmly welcomed! Please see [CONTRIBUTING.md](CONTRIBUTING.md) ([Português](CONTRIBUTING.pt-BR.md)) for guidelines, invariants, and pull request requirements.

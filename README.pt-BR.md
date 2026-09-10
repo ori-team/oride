@@ -133,6 +133,19 @@ docs/
   design.md       # arquitetura do projeto
 ```
 
+## Roadmap e Próximos Slices (`v0.3.0`)
+
+O Oride segue uma filosofia rígida de **editor contido, enxuto e resiliente (fail-closed)**. As próximas fatias planejadas incluem:
+
+- [ ] **Auto-Pairing Inteligente de Delimitadores:** Inserção e fechamento automático de parênteses, colchetes, chaves e aspas.
+- [ ] **Text Objects no Modo Modal:** Expansão de comandos de texto estilo Vim (`ci(`, `da"`, `yiw`).
+- [ ] **Staging de Hunks no Git:** Staging interativo por bloco de alteração no painel SCM (estilo `git add -p`).
+- [ ] **Navegação de Código via LSP:** Seletor de símbolos/outline e expansão leve de snippets.
+- [ ] **Histórico de Scrollback no PTY:** Buffer navegável para rolar saídas longas no terminal embutido.
+- [ ] **Expansão de Gramáticas Tree-Sitter:** Mecanismo modular simplificado para inclusão de novas linguagens.
+
+> Para especificações técnicas detalhadas, DAGs de implementação e o que está fora de escopo, consulte o [Plano de Roadmap](docs/planning/alpha6-roadmap.md).
+
 ## Contribuição
 
 Contribuições são muito bem-vindas! Consulte o arquivo [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md) ([English](CONTRIBUTING.md)) para conhecer os padrões de código, invariantes e fluxo de Pull Requests.
