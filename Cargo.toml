@@ -23,7 +23,7 @@ default-members = ["crates/oride"]
 version = "0.2.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/raillen/ori-code-editor-tui"
+repository = "https://github.com/ori-team/oride"
 authors = ["raillen"]
 rust-version = "1.80"
 

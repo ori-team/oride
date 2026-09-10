@@ -7,7 +7,7 @@ OriScript, Ori, Markdown, HTML, CSS, JavaScript/TypeScript, Rust, Python, D (dla
 Lua, Nim, and Ruby.
 
 Status: **`0.2.0`** — mini-IDE TUI contida (editor, tree, terminal, git/SCM com ahead/behind e pull/push, find & replace com globs, multi-LSP sob demanda, MD preview rico com imagens e links, splits dinâmicos, mouse opt-in).
-Repo: [raillen/ori-code-editor-tui](https://github.com/raillen/ori-code-editor-tui).  
+Repo: [ori-team/oride](https://github.com/ori-team/oride).  
 Docs: [design](docs/design.md) · [config](docs/config.md) · [markdown](docs/markdown.md) · **[roadmap alpha.6+](docs/planning/alpha6-roadmap.md)**.
 
 ## Goals (produto contido)
