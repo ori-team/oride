@@ -2,8 +2,39 @@
 
 ## Unreleased
 
-- (próximo: languages first-class, MD links, images via terminal protocol — ver `docs/planning/alpha6-roadmap.md`)
-- Remoção planejada de **macros** (anti-bloat)
+## 0.2.0
+
+Release focada em linguagens first-class, visualização rica e mídia no Markdown, Git/SCM interativo com sincronização, busca com globs, persistência completa de sessão e consolidação multi-LSP.
+
+### Added
+
+- **Multi-LSP sob demanda (`L2`):** Suporte nativo para servidores externos configurados em `[lsp.servers]` e nos providers embutidos (`rust-analyzer`, `pylsp`, `serve-d`, `lua-language-server`, `typescript-language-server`, `ori-lsp`, `oriscript lsp`), com ciclo de vida preguiçoso e tratamento fail-closed amigável caso o binário não esteja no `$PATH`
+- **Git status bar & sync (`G1.3`):** Contador de commits à frente/atrás na barra de status em relação ao upstream (`↑ahead ↓behind`, ex.: `git:main ↑1 ↓2`), atalhos no SCM para `git pull` (`p`) e `git push` (`P` / `Shift+P`), além de ações dedicadas na Command Palette e no menu Git
+- **Mídia no Markdown (`M2`):** Inspeção pura em Rust de dimensões e tipos de imagens locais (`PNG`, `JPEG`, `GIF`, `WebP`, `SVG`), detecção de protocolos de terminal gráfico (Kitty Graphics, Sixel, iTerm2), visualização enriquecida no preview e configuração `[markdown].terminal_images`
+- **Persistência de Sessão (`E1.1`):** Restauração completa de layout em `.oride/session.toml` preservando posição exata de scroll (`scroll_y`), proporções de split e documento secundário, largura da árvore de arquivos e visibilidade dos painéis
+- **Filtro por Glob na Busca de Projeto (`E1.2`):** Suporte a padrões glob (`*.rs`, `!target/**`) no `oride-search` (ripgrep e crawler interno), atalho `Alt+G` para alternar foco no campo de glob e navegação circular `Tab` no modal de busca e substituição
+- **Linguagens First-Class (`L1`):** Suporte a Dlang (`.d`, `.di`) e Lua (`.lua`), além de Rust, Python, TypeScript/TSX, Ruby, Nim, Ori (`.orl`) e OriScript (`.oris`), com highlight, comentários, palavras para autocompletar e injeção de code fences em Markdown
+- **Markdown Rico (`M1`):** Tabelas formatadas com desenho Unicode de caixas e alinhamento de colunas, destaque sintático dentro de blocos de código e abertura de links no navegador do sistema por clique do mouse ou `Alt+Enter`
+- **Operações de Arquivos e Git SCM (`G1`):** Stage (`s`), unstage (`u`) e commit interativo (`c`) no painel SCM; renomear (`r`), deletar (`d`) e copiar caminho (`y`/`c`) na árvore de arquivos
+- **Busca e Substituição no Projeto:** `replace_in_project` integrado com recarregamento em tempo real dos buffers abertos
+- **Redimensionamento Dinâmico:** Arrastar divisores de árvore e divisões do editor via mouse e atalhos na palette
+- Grammars tree-sitter oficiais para Rust, Python, TypeScript/TSX e Ruby; fallback léxico contido para Nim, Ori, D e Lua
+
+### Removed
+
+- **Remoção de Macros (`R1`):** Ações e menções a macros de teclado (`F9`/`F10`) removidas do core e da interface, consolidando a postura anti-bloat e mantendo o editor leve e rápido
+
+### Fixed
+
+- Autocomplete substitui o prefixo digitado em vez de anexar o texto completo, sincroniza cada edição com o LSP e converte snippets/text edits para inserção compatível com o editor
+- Abrir arquivo com Enter na árvore sincroniza imediatamente o documento do painel focado, sem exigir troca de aba para renderizar o conteúdo
+- Proteção de saída agora considera mudanças não salvas em **todas** as abas, não apenas na ativa
+- `Save all` reporta falhas parciais em vez de anunciá-las silenciosamente como sucesso
+- Reload externo atualiza a aba correta mesmo quando ela está em background; troca de workspace reinicia watcher, LSP e PTY
+- Terminal embutido honra `[terminal].shell`, encerra a thread leitora com o PTY e limita scrollback Unicode sem `panic`
+- LSP usa colunas UTF-16, aplica múltiplos `TextEdit` por range, preserva `insertText` de completion e mantém `didOpen`/`didClose` consistentes
+- Navegação de project search converte colunas byte do ripgrep para caracteres; cut line remove finais CRLF completos
+- Status bar mantém `git blame` em cache por arquivo/linha, evitando spawn de subprocesso a cada frame
 
 ## 0.1.0-alpha.6
 

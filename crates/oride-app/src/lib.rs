@@ -3,15 +3,27 @@
 mod app;
 mod browser;
 mod clipboard;
+pub mod component;
 mod disk_watch;
 mod find;
+pub mod health;
 mod jump_list;
 mod menus;
+pub mod modal;
 mod mouse;
 mod run;
 mod session;
 mod split;
+pub mod tasks;
 mod terminal_guard;
 
-pub use app::{App, KeyCommand};
+pub use app::{App, CompletionChoice, Focus, KeyCommand, Overlay};
+pub use component::{
+    Component, ComponentId, ComponentRegistry, EditorComponent, MenuBarComponent, ScmComponent,
+    StatusBarComponent, TerminalComponent, TreeComponent,
+};
+pub use mouse::{HitRegions, HitTarget};
+pub use oride_i18n::Locale;
 pub use run::run;
+pub use session::{Session, SplitSession};
+pub use split::{SplitOrientation, SplitState};

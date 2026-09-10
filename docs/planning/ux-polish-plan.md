@@ -1,6 +1,6 @@
 # Plano de polish UX / ND-acessibilidade (Oride)
 
-**Status:** S+A + mouse opt-in + MVPs de navegação **entregues** (baseline **0.1.0-alpha.6**).  
+**Status:** S+A + mouse opt-in + MVPs de navegação + Session layout + SCM sync entregues (**0.2.0**).  
 **Próximo normativo:** [`alpha6-roadmap.md`](alpha6-roadmap.md).  
 **Princípio:** descoberta > memorização; um foco óbvio; no máx. 3 regiões “sempre on”; Esc sempre sai.
 
@@ -12,9 +12,9 @@
 |------|---------|
 | **Mouse** | **Feito**, default **off** (`mouse = true` ou menu View) |
 | **Menu bar** | **Feito** |
-| **Painel SCM** | **Feito** |
+| **Painel SCM** | **Feito** (com stage/unstage/commit, ahead/behind e pull/push) |
 | **Tier S + A** | **Feito** |
-| **Macros** | **Remover** (anti-bloat) — ver roadmap R1 |
+| **Macros** | **Removido** (anti-bloat R1) |
 | **Preview HTML/browser** | **Fora de escopo** |
 | **Terminal** | **Feito** (PTY interativo; polish residual no roadmap) |
 
@@ -51,10 +51,9 @@
 | Surround / change around | **MVP** `F8` |
 | Undo history panel | **MVP** `Ctrl+Shift+U` (não árvore ramificada) |
 | Multi-source picker | **MVP** `Ctrl+Shift+T` (buf+cmd+file) |
-| Macros | **MVP** `F9`/`F10` |
-| Macros | **remover** (R1) — não expandir |
+| Macros | **Removido** (anti-bloat R1) |
 | Full vim / telescope monstro / undo tree ramos | **fora** (alpha6-roadmap §1) |
-| Session layout (scroll/splits) | **planejado** E1.1 |
+| Session layout (scroll/splits) | **Feito** (E1.1) |
 | Inlay hints densos | **fora** salvo toggle trivial pós-L2 |
 
 ## Mouse

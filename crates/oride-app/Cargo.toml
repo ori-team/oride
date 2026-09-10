@@ -18,6 +18,7 @@ oride-syntax = { workspace = true }
 oride-lsp = { workspace = true }
 oride-search = { workspace = true }
 oride-plugin = { workspace = true }
+oride-i18n = { workspace = true }
 ratatui = { workspace = true }
 crossterm = { workspace = true }
 anyhow = { workspace = true }

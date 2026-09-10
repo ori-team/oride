@@ -52,6 +52,7 @@ pub enum Action {
     FindNext,
     FindPrev,
     ProjectFind,
+    ProjectReplace,
     Replace,
     Copy,
     Paste,
@@ -68,12 +69,18 @@ pub enum Action {
     SplitHorizontal,
     FocusNextPane,
     ClosePane,
+    ResizePaneGrow,
+    ResizePaneShrink,
+    TreeGrow,
+    TreeShrink,
     AddCursorAbove,
     AddCursorBelow,
     ClearExtraCursors,
     // UX polish (menu / SCM / navigation)
     ToggleScm,
     FocusScm,
+    GitPull,
+    GitPush,
     BufferPicker,
     JumpBack,
     JumpForward,
@@ -82,11 +89,14 @@ pub enum Action {
     ShowDiff,
     // Tier B + mouse
     Surround,
-    MacroToggleRecord,
-    MacroPlay,
     MultiPicker,
     UndoTree,
     ToggleMouse,
+    SelectTheme,
+    SelectLocale,
+    HealthCheck,
+    ToggleModal,
+    RunTasks,
 }
 
 impl Action {
@@ -140,6 +150,7 @@ impl Action {
             Self::FindNext => "Find next",
             Self::FindPrev => "Find previous",
             Self::ProjectFind => "Find in project…",
+            Self::ProjectReplace => "Replace in project…",
             Self::Replace => "Replace…",
             Self::Copy => "Copy",
             Self::Paste => "Paste",
@@ -154,11 +165,17 @@ impl Action {
             Self::SplitHorizontal => "Split editor horizontal",
             Self::FocusNextPane => "Focus next editor pane",
             Self::ClosePane => "Close editor pane",
+            Self::ResizePaneGrow => "Split / Pane wider",
+            Self::ResizePaneShrink => "Split / Pane narrower",
+            Self::TreeGrow => "File tree wider",
+            Self::TreeShrink => "File tree narrower",
             Self::AddCursorAbove => "Add cursor above",
             Self::AddCursorBelow => "Add cursor below",
             Self::ClearExtraCursors => "Clear extra cursors",
             Self::ToggleScm => "Toggle SCM panel",
             Self::FocusScm => "Focus SCM panel",
+            Self::GitPull => "Git pull (fetch & merge)",
+            Self::GitPush => "Git push",
             Self::BufferPicker => "Buffer picker…",
             Self::JumpBack => "Jump back",
             Self::JumpForward => "Jump forward",
@@ -166,11 +183,14 @@ impl Action {
             Self::Welcome => "Essential shortcuts",
             Self::ShowDiff => "Git diff (active file)",
             Self::Surround => "Surround selection…",
-            Self::MacroToggleRecord => "Macro: record/stop",
-            Self::MacroPlay => "Macro: play",
             Self::MultiPicker => "Multi picker (files/cmds/buffers)",
             Self::UndoTree => "Undo history…",
             Self::ToggleMouse => "Enable / disable mouse",
+            Self::SelectTheme => "Preferences: Color Theme",
+            Self::SelectLocale => "Preferences: Display Language",
+            Self::HealthCheck => "System & LSP health check (:health)",
+            Self::ToggleModal => "Toggle modal mode (Vim / CUA)",
+            Self::RunTasks => "Run task…",
         }
     }
 
@@ -183,7 +203,9 @@ impl Action {
             Action::Redo,
             Action::Find,
             Action::FindNext,
+            Action::FindPrev,
             Action::ProjectFind,
+            Action::ProjectReplace,
             Action::Replace,
             Action::SelectAll,
             Action::Copy,
@@ -204,6 +226,8 @@ impl Action {
             Action::ToggleTerminal,
             Action::TerminalGrow,
             Action::TerminalShrink,
+            Action::TreeGrow,
+            Action::TreeShrink,
             Action::FocusTree,
             Action::FocusEditor,
             Action::FocusToggleTreeEditor,
@@ -221,11 +245,15 @@ impl Action {
             Action::SplitHorizontal,
             Action::FocusNextPane,
             Action::ClosePane,
+            Action::ResizePaneGrow,
+            Action::ResizePaneShrink,
             Action::AddCursorAbove,
             Action::AddCursorBelow,
             Action::ClearExtraCursors,
             Action::ToggleScm,
             Action::FocusScm,
+            Action::GitPull,
+            Action::GitPush,
             Action::BufferPicker,
             Action::JumpBack,
             Action::JumpForward,
@@ -233,11 +261,14 @@ impl Action {
             Action::Welcome,
             Action::ShowDiff,
             Action::Surround,
-            Action::MacroToggleRecord,
-            Action::MacroPlay,
             Action::MultiPicker,
             Action::UndoTree,
             Action::ToggleMouse,
+            Action::SelectTheme,
+            Action::SelectLocale,
+            Action::HealthCheck,
+            Action::ToggleModal,
+            Action::RunTasks,
             Action::Quit,
         ]
     }
@@ -282,6 +313,8 @@ pub fn parse_action(id: &str) -> Result<Action, ActionParseError> {
         "toggle_terminal" => Action::ToggleTerminal,
         "terminal_grow" => Action::TerminalGrow,
         "terminal_shrink" => Action::TerminalShrink,
+        "tree_grow" => Action::TreeGrow,
+        "tree_shrink" => Action::TreeShrink,
         "focus_tree" => Action::FocusTree,
         "focus_editor" => Action::FocusEditor,
         "focus_terminal" => Action::FocusTerminal,
@@ -304,6 +337,7 @@ pub fn parse_action(id: &str) -> Result<Action, ActionParseError> {
         "find_next" => Action::FindNext,
         "find_prev" => Action::FindPrev,
         "project_find" => Action::ProjectFind,
+        "project_replace" => Action::ProjectReplace,
         "replace" => Action::Replace,
         "copy" => Action::Copy,
         "paste" => Action::Paste,
@@ -318,11 +352,15 @@ pub fn parse_action(id: &str) -> Result<Action, ActionParseError> {
         "split_horizontal" => Action::SplitHorizontal,
         "focus_next_pane" => Action::FocusNextPane,
         "close_pane" => Action::ClosePane,
+        "resize_pane_grow" => Action::ResizePaneGrow,
+        "resize_pane_shrink" => Action::ResizePaneShrink,
         "add_cursor_above" => Action::AddCursorAbove,
         "add_cursor_below" => Action::AddCursorBelow,
         "clear_extra_cursors" => Action::ClearExtraCursors,
         "toggle_scm" => Action::ToggleScm,
         "focus_scm" => Action::FocusScm,
+        "git_pull" => Action::GitPull,
+        "git_push" => Action::GitPush,
         "buffer_picker" => Action::BufferPicker,
         "jump_back" => Action::JumpBack,
         "jump_forward" => Action::JumpForward,
@@ -330,11 +368,14 @@ pub fn parse_action(id: &str) -> Result<Action, ActionParseError> {
         "welcome" => Action::Welcome,
         "show_diff" => Action::ShowDiff,
         "surround" => Action::Surround,
-        "macro_toggle_record" => Action::MacroToggleRecord,
-        "macro_play" => Action::MacroPlay,
         "multi_picker" => Action::MultiPicker,
         "undo_tree" => Action::UndoTree,
         "toggle_mouse" => Action::ToggleMouse,
+        "select_theme" => Action::SelectTheme,
+        "select_locale" | "display_language" => Action::SelectLocale,
+        "health_check" | "checkhealth" | "health" => Action::HealthCheck,
+        "toggle_modal" | "modal_mode" => Action::ToggleModal,
+        "run_tasks" | "tasks" => Action::RunTasks,
         other => return Err(ActionParseError(other.to_string())),
     };
     Ok(action)
@@ -348,9 +389,25 @@ mod tests {
     fn parses_polish_and_lsp_actions() {
         assert_eq!(parse_action("find").unwrap(), Action::Find);
         assert_eq!(parse_action("lsp_format").unwrap(), Action::LspFormat);
+        assert_eq!(parse_action("git_pull").unwrap(), Action::GitPull);
+        assert_eq!(parse_action("git_push").unwrap(), Action::GitPush);
         assert_eq!(
             parse_action("toggle_diagnostics").unwrap(),
             Action::ToggleDiagnostics
         );
+        assert_eq!(
+            parse_action("project_replace").unwrap(),
+            Action::ProjectReplace
+        );
+        assert_eq!(
+            parse_action("resize_pane_grow").unwrap(),
+            Action::ResizePaneGrow
+        );
+        assert_eq!(parse_action("tree_grow").unwrap(), Action::TreeGrow);
+        assert_eq!(parse_action("select_theme").unwrap(), Action::SelectTheme);
+        assert_eq!(parse_action("select_locale").unwrap(), Action::SelectLocale);
+        assert_eq!(parse_action("health").unwrap(), Action::HealthCheck);
+        assert_eq!(parse_action("toggle_modal").unwrap(), Action::ToggleModal);
+        assert_eq!(parse_action("tasks").unwrap(), Action::RunTasks);
     }
 }

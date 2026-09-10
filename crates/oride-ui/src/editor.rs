@@ -56,9 +56,14 @@ impl SelPaint {
     }
 }
 
-pub fn render_editor(frame: &mut Frame, area: Rect, view: &EditorView<'_>, theme: &UiTheme) {
+pub fn render_editor(
+    frame: &mut Frame,
+    area: Rect,
+    view: &EditorView<'_>,
+    theme: &UiTheme,
+) -> Option<Position> {
     if area.height == 0 || area.width == 0 {
-        return;
+        return None;
     }
 
     let border = if view.focused_pane {
@@ -89,7 +94,7 @@ pub fn render_editor(frame: &mut Frame, area: Rect, view: &EditorView<'_>, theme
     };
     let text_width = inner.width.saturating_sub(gutter) as usize;
     if text_width == 0 {
-        return;
+        return None;
     }
     let visible_rows = inner.height as usize;
     let line_count = view.buffer.line_count().max(1);
@@ -239,6 +244,7 @@ pub fn render_editor(frame: &mut Frame, area: Rect, view: &EditorView<'_>, theme
     if let Some(pos) = cursor_pos {
         frame.set_cursor_position(pos);
     }
+    cursor_pos
 }
 
 fn selection_style(_theme: &UiTheme) -> Style {

@@ -1,8 +1,8 @@
-//! Host: registro estático de languages + plugins.
+use std::path::Path;
 
 use oride_syntax::LanguageId;
 
-use crate::language::{builtin_languages, provider_for, LanguageProvider};
+use crate::language::{builtin_languages, provider_for, DynamicLang, LanguageProvider};
 use crate::plugin::{
     CommandMeta, LifecyclePlugin, Plugin, PluginCtx, PluginHook, PluginResult, ShowPathPlugin,
     WordCountPlugin,
@@ -12,6 +12,7 @@ use crate::plugin::{
 pub struct PluginHost {
     languages: Vec<&'static dyn LanguageProvider>,
     plugins: Vec<Box<dyn Plugin>>,
+    dynamic_languages: Vec<DynamicLang>,
 }
 
 impl PluginHost {
@@ -20,7 +21,137 @@ impl PluginHost {
         languages: Vec<&'static dyn LanguageProvider>,
         plugins: Vec<Box<dyn Plugin>>,
     ) -> Self {
-        Self { languages, plugins }
+        Self {
+            languages,
+            plugins,
+            dynamic_languages: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn with_dynamic_languages(
+        languages: Vec<&'static dyn LanguageProvider>,
+        plugins: Vec<Box<dyn Plugin>>,
+        dynamic_languages: Vec<DynamicLang>,
+    ) -> Self {
+        Self {
+            languages,
+            plugins,
+            dynamic_languages,
+        }
+    }
+
+    pub fn add_dynamic_language(&mut self, lang: DynamicLang) {
+        if let Some(pos) = self
+            .dynamic_languages
+            .iter()
+            .position(|l| l.id.eq_ignore_ascii_case(&lang.id))
+        {
+            self.dynamic_languages[pos] = lang;
+        } else {
+            self.dynamic_languages.push(lang);
+        }
+    }
+
+    pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) {
+        self.plugins.push(plugin);
+    }
+
+    #[must_use]
+    pub fn dynamic_languages(&self) -> &[DynamicLang] {
+        &self.dynamic_languages
+    }
+
+    #[must_use]
+    pub fn detect_language_by_path(&self, path: &Path) -> Option<LanguageId> {
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        let name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+
+        for d in &self.dynamic_languages {
+            if d.filenames.iter().any(|f| f.eq_ignore_ascii_case(&name)) {
+                return Some(d.language_id);
+            }
+            if !ext.is_empty() && d.extensions.iter().any(|e| e.eq_ignore_ascii_case(&ext)) {
+                return Some(d.language_id);
+            }
+        }
+        None
+    }
+
+    #[must_use]
+    pub fn comment_open(&self, id: LanguageId) -> Option<&str> {
+        for d in &self.dynamic_languages {
+            if d.language_id == id {
+                if let Some(open) = &d.comment_open {
+                    return Some(open.as_str());
+                }
+            }
+        }
+        self.language(id).comment_open()
+    }
+
+    #[must_use]
+    pub fn comment_close(&self, id: LanguageId) -> Option<&str> {
+        for d in &self.dynamic_languages {
+            if d.language_id == id {
+                if let Some(close) = &d.comment_close {
+                    return Some(close.as_str());
+                }
+            }
+        }
+        self.language(id).comment_close()
+    }
+
+    #[must_use]
+    pub fn lsp_command(&self, id: LanguageId) -> Option<Vec<String>> {
+        for d in &self.dynamic_languages {
+            if d.language_id == id && !d.lsp_command.is_empty() {
+                return Some(d.lsp_command.clone());
+            }
+        }
+        self.language(id)
+            .lsp_command()
+            .map(|cmd| cmd.iter().map(|s| (*s).to_string()).collect())
+    }
+
+    #[must_use]
+    pub fn completion_words(&self, id: LanguageId) -> Vec<String> {
+        let mut words: Vec<String> = self
+            .language(id)
+            .completion_words()
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
+        for d in &self.dynamic_languages {
+            if d.language_id == id {
+                for w in &d.completion_words {
+                    if !words.contains(w) {
+                        words.push(w.clone());
+                    }
+                }
+            }
+        }
+        words
+    }
+
+    #[must_use]
+    pub fn default_soft_wrap(&self, id: LanguageId) -> bool {
+        for d in &self.dynamic_languages {
+            if d.language_id == id {
+                if let Some(sw) = d.soft_wrap {
+                    return sw;
+                }
+            }
+        }
+        self.language(id).default_soft_wrap()
     }
 
     #[must_use]

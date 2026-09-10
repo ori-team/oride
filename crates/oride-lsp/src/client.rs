@@ -1,6 +1,6 @@
 //! Cliente LSP com thread de leitura.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
@@ -14,7 +14,8 @@ use thiserror::Error;
 
 use crate::protocol::{notification, path_to_uri, read_message, request, write_message};
 use crate::types::{
-    CompletionItem, Diagnostic, DiagnosticSeverity, HoverInfo, Location, Position, Range,
+    character_column, CompletionItem, Diagnostic, DiagnosticSeverity, HoverInfo, Location,
+    Position, Range,
 };
 
 #[derive(Debug, Error)]
@@ -56,6 +57,7 @@ pub struct LspClient {
     _reader: Option<thread::JoinHandle<()>>,
     root: PathBuf,
     timeout: Duration,
+    open_documents: HashSet<String>,
     pub ready: bool,
     pub last_error: Option<String>,
 }
@@ -128,6 +130,11 @@ impl LspClient {
                         }
                     }
                     Err(_) => {
+                        if let Ok(mut map) = pending_r.lock() {
+                            for (_, pending) in map.drain() {
+                                let _ = pending.tx.send(Err(LspError::NotRunning));
+                            }
+                        }
                         let _ = ev_tx.send(LspEvent::Exited);
                         break;
                     }
@@ -144,6 +151,7 @@ impl LspClient {
             _reader: Some(reader),
             root,
             timeout: Duration::from_millis(timeout_ms.max(500)),
+            open_documents: HashSet::new(),
             ready: false,
             last_error: None,
         };
@@ -201,7 +209,12 @@ impl LspClient {
                 .map_err(|_| LspError::Protocol("lock".into()))?;
             map.insert(id, Pending { tx });
         }
-        self.write(&request(id, method, params))?;
+        if let Err(error) = self.write(&request(id, method, params)) {
+            if let Ok(mut map) = self.pending.lock() {
+                map.remove(&id);
+            }
+            return Err(error);
+        }
         let deadline = Instant::now() + self.timeout;
         loop {
             let remaining = deadline.saturating_duration_since(Instant::now());
@@ -241,17 +254,22 @@ impl LspClient {
 
     pub fn did_open(&mut self, path: &Path, language_id: &str, text: &str) -> Result<(), LspError> {
         let uri = path_to_uri(path);
+        if self.open_documents.contains(&uri) {
+            return Ok(());
+        }
         self.notify(
             "textDocument/didOpen",
             json!({
                 "textDocument": {
-                    "uri": uri,
+                    "uri": &uri,
                     "languageId": language_id,
                     "version": 1,
                     "text": text
                 }
             }),
-        )
+        )?;
+        self.open_documents.insert(uri);
+        Ok(())
     }
 
     pub fn did_change(&mut self, path: &Path, version: i32, text: &str) -> Result<(), LspError> {
@@ -278,10 +296,15 @@ impl LspClient {
 
     pub fn did_close(&mut self, path: &Path) -> Result<(), LspError> {
         let uri = path_to_uri(path);
+        if !self.open_documents.contains(&uri) {
+            return Ok(());
+        }
         self.notify(
             "textDocument/didClose",
-            json!({ "textDocument": { "uri": uri } }),
-        )
+            json!({ "textDocument": { "uri": &uri } }),
+        )?;
+        self.open_documents.remove(&uri);
+        Ok(())
     }
 
     pub fn hover(&mut self, path: &Path, pos: Position) -> Result<Option<HoverInfo>, LspError> {
@@ -324,26 +347,36 @@ impl LspClient {
         Ok(parse_location(&result))
     }
 
-    pub fn formatting(&mut self, path: &Path) -> Result<Option<String>, LspError> {
+    pub fn formatting(
+        &mut self,
+        path: &Path,
+        source: &str,
+        tab_size: u8,
+        insert_spaces: bool,
+    ) -> Result<Option<String>, LspError> {
         let uri = path_to_uri(path);
         let result = self.request(
             "textDocument/formatting",
             json!({
                 "textDocument": { "uri": uri },
-                "options": { "tabSize": 4, "insertSpaces": true }
+                "options": { "tabSize": tab_size, "insertSpaces": insert_spaces }
             }),
         )?;
-        Ok(apply_text_edits_full_replace(&result))
+        apply_text_edits(source, &result).map_err(LspError::Protocol)
     }
 
     pub fn shutdown(&mut self) {
+        let configured_timeout = self.timeout;
+        self.timeout = self.timeout.min(Duration::from_millis(500));
         let _ = self.request("shutdown", json!(null));
+        self.timeout = configured_timeout;
         let _ = self.notify("exit", json!(null));
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
             let _ = child.wait();
         }
         self.stdin = None;
+        self.open_documents.clear();
         self.ready = false;
     }
 }
@@ -454,10 +487,18 @@ fn parse_completions(result: &Value) -> Vec<CompletionItem> {
                 .get("detail")
                 .and_then(|d| d.as_str())
                 .map(str::to_string);
-            let insert_text = it
+            let mut insert_text = it
                 .get("insertText")
                 .and_then(|d| d.as_str())
+                .or_else(|| {
+                    it.get("textEdit")
+                        .and_then(|edit| edit.get("newText"))
+                        .and_then(|text| text.as_str())
+                })
                 .map(str::to_string);
+            if it.get("insertTextFormat").and_then(Value::as_u64) == Some(2) {
+                insert_text = insert_text.map(|text| snippet_to_plain_text(&text));
+            }
             Some(CompletionItem {
                 label,
                 detail,
@@ -465,6 +506,35 @@ fn parse_completions(result: &Value) -> Vec<CompletionItem> {
             })
         })
         .collect()
+}
+
+fn snippet_to_plain_text(snippet: &str) -> String {
+    let mut plain = String::new();
+    let mut cursor = 0usize;
+    while cursor < snippet.len() {
+        let remaining = &snippet[cursor..];
+        if let Some(body) = remaining.strip_prefix("${") {
+            if let Some(close) = body.find('}') {
+                let placeholder = &body[..close];
+                if let Some((_, default)) = placeholder.split_once(':') {
+                    plain.push_str(default);
+                }
+                cursor += 2 + close + 1;
+                continue;
+            }
+        }
+        if let Some(body) = remaining.strip_prefix('$') {
+            let digits = body.bytes().take_while(u8::is_ascii_digit).count();
+            if digits > 0 {
+                cursor += 1 + digits;
+                continue;
+            }
+        }
+        let character = remaining.chars().next().expect("cursor within snippet");
+        plain.push(character);
+        cursor += character.len_utf8();
+    }
+    plain
 }
 
 fn parse_location(result: &Value) -> Option<Location> {
@@ -490,30 +560,64 @@ fn parse_location(result: &Value) -> Option<Location> {
     Some(Location { uri, range })
 }
 
-/// Se o formatting retornar um único edit full-document, devolve o texto novo.
-fn apply_text_edits_full_replace(result: &Value) -> Option<String> {
-    let arr = result.as_array()?;
+fn apply_text_edits(source: &str, result: &Value) -> Result<Option<String>, String> {
+    let arr = result
+        .as_array()
+        .ok_or_else(|| "format response is not an array".to_string())?;
     if arr.is_empty() {
-        return None;
+        return Ok(None);
     }
-    // Heurística: concatena newText de todos os edits na ordem (funciona se full replace)
-    if arr.len() == 1 {
-        return arr[0]
+
+    let mut edits = Vec::with_capacity(arr.len());
+    for edit in arr {
+        let range = parse_range(edit.get("range"))
+            .ok_or_else(|| "format edit has an invalid range".to_string())?;
+        let new_text = edit
             .get("newText")
-            .and_then(|t| t.as_str())
-            .map(str::to_string);
-    }
-    let mut parts = Vec::new();
-    for e in arr {
-        if let Some(t) = e.get("newText").and_then(|t| t.as_str()) {
-            parts.push(t);
+            .and_then(Value::as_str)
+            .ok_or_else(|| "format edit has no newText".to_string())?;
+        let start = lsp_position_to_byte(source, range.start)
+            .ok_or_else(|| "format edit start is outside the document".to_string())?;
+        let end = lsp_position_to_byte(source, range.end)
+            .ok_or_else(|| "format edit end is outside the document".to_string())?;
+        if start > end {
+            return Err("format edit range is reversed".into());
         }
+        edits.push((start, end, new_text));
     }
-    if parts.is_empty() {
-        None
-    } else {
-        Some(parts.join(""))
+
+    edits.sort_by_key(|(start, _, _)| std::cmp::Reverse(*start));
+    let mut next_start = source.len();
+    let mut formatted = source.to_string();
+    for (start, end, new_text) in edits {
+        if end > next_start {
+            return Err("format edits overlap".into());
+        }
+        formatted.replace_range(start..end, new_text);
+        next_start = start;
     }
+
+    Ok(Some(formatted))
+}
+
+fn lsp_position_to_byte(text: &str, position: Position) -> Option<usize> {
+    let mut line_start = 0usize;
+    for _ in 0..position.line {
+        let newline = text.get(line_start..)?.find('\n')?;
+        line_start += newline + 1;
+    }
+    let remainder = text.get(line_start..)?;
+    let line_end = remainder.find('\n').unwrap_or(remainder.len());
+    let line = remainder[..line_end]
+        .strip_suffix('\r')
+        .unwrap_or(&remainder[..line_end]);
+    let character_column = character_column(line, position.character)?;
+    let byte_column = line
+        .chars()
+        .take(character_column)
+        .map(char::len_utf8)
+        .sum::<usize>();
+    Some(line_start + byte_column)
 }
 
 #[cfg(test)]
@@ -537,5 +641,53 @@ mod tests {
         assert_eq!(d.len(), 1);
         assert_eq!(d[0].message, "boom");
         assert_eq!(d[0].severity, DiagnosticSeverity::Error);
+    }
+
+    #[test]
+    fn applies_multiple_format_edits_with_utf16_ranges() {
+        let source = "a😀b\nsecond\n";
+        let edits = json!([
+            {
+                "range": {
+                    "start": {"line": 0, "character": 1},
+                    "end": {"line": 0, "character": 3}
+                },
+                "newText": "X"
+            },
+            {
+                "range": {
+                    "start": {"line": 1, "character": 0},
+                    "end": {"line": 1, "character": 6}
+                },
+                "newText": "2nd"
+            }
+        ]);
+
+        assert_eq!(
+            apply_text_edits(source, &edits).unwrap(),
+            Some("aXb\n2nd\n".into())
+        );
+    }
+
+    #[test]
+    fn parses_completion_text_edits_and_plain_snippets() {
+        let result = json!([
+            {
+                "label": "return",
+                "textEdit": { "newText": "return" }
+            },
+            {
+                "label": "if",
+                "insertText": "if ${1:condition}\n    ${0}\nend",
+                "insertTextFormat": 2
+            }
+        ]);
+
+        let items = parse_completions(&result);
+        assert_eq!(items[0].insert_text.as_deref(), Some("return"));
+        assert_eq!(
+            items[1].insert_text.as_deref(),
+            Some("if condition\n    \nend")
+        );
     }
 }

@@ -92,27 +92,42 @@ impl ProjectTree {
         self.selected
     }
 
+    #[must_use]
+    pub fn count_visible_rows(&self) -> usize {
+        1 + count_visible_nodes(&self.children)
+    }
+
     pub fn set_selected(&mut self, index: usize) {
-        let len = self.flat_rows().len();
-        if len == 0 {
+        let total_rows = self.count_visible_rows();
+        if total_rows == 0 {
             self.selected = 0;
         } else {
-            self.selected = index.min(len - 1);
+            self.selected = index.min(total_rows - 1);
         }
     }
 
     pub fn move_selection(&mut self, delta: isize) {
-        let len = self.flat_rows().len() as isize;
-        if len == 0 {
+        let total_rows = self.count_visible_rows() as isize;
+        if total_rows == 0 {
             return;
         }
-        let next = (self.selected as isize + delta).rem_euclid(len) as usize;
-        self.selected = next;
+        let next_index = (self.selected as isize + delta).rem_euclid(total_rows) as usize;
+        self.selected = next_index;
     }
 
     #[must_use]
     pub fn selected_row(&self) -> Option<TreeRow> {
-        self.flat_rows().into_iter().nth(self.selected)
+        if self.selected == 0 {
+            return Some(TreeRow {
+                depth: 0,
+                name: self.root_name.clone(),
+                path: self.root.clone(),
+                is_dir: true,
+                expanded: true,
+            });
+        }
+        let mut target_index = self.selected - 1;
+        find_node_at_index(&self.children, 1, &mut target_index)
     }
 
     /// Achata a árvore para a UI (inclui linha da raiz depth 0).
@@ -236,9 +251,9 @@ impl ProjectTree {
         let expanded = collect_expanded(&self.children);
         self.children = read_dir_nodes(&self.root, self.show_hidden)?;
         restore_expanded(&mut self.children, &expanded, self.show_hidden)?;
-        let len = self.flat_rows().len();
-        if self.selected >= len {
-            self.selected = len.saturating_sub(1);
+        let total_rows = self.count_visible_rows();
+        if self.selected >= total_rows {
+            self.selected = total_rows.saturating_sub(1);
         }
         Ok(())
     }
@@ -270,6 +285,62 @@ impl ProjectTree {
             self.selected = idx;
         }
         Ok(created)
+    }
+
+    /// Renomeia o nó selecionado (arquivo ou pasta). Não permite renomear a raiz do projeto.
+    pub fn rename_selected(&mut self, new_name: &str) -> Result<PathBuf, TreeError> {
+        let row = self
+            .selected_row()
+            .ok_or_else(|| TreeError::InvalidName(String::new()))?;
+        if row.path == self.root {
+            return Err(TreeError::InvalidName(
+                "cannot rename project root".to_string(),
+            ));
+        }
+        let new_name = new_name.trim();
+        if new_name.is_empty()
+            || new_name.contains('/')
+            || new_name.contains('\\')
+            || new_name == "."
+            || new_name == ".."
+        {
+            return Err(TreeError::InvalidName(new_name.to_string()));
+        }
+        let parent = row.path.parent().unwrap_or(&self.root);
+        let target = parent.join(new_name);
+        if target.exists() {
+            return Err(TreeError::AlreadyExists(target));
+        }
+        fs::rename(&row.path, &target)?;
+        self.refresh()?;
+        if let Some(idx) = self.flat_rows().iter().position(|r| r.path == target) {
+            self.selected = idx;
+        }
+        Ok(target)
+    }
+
+    /// Exclui o nó selecionado (arquivo ou pasta recursivamente). Não permite excluir a raiz.
+    pub fn delete_selected(&mut self) -> Result<PathBuf, TreeError> {
+        let row = self
+            .selected_row()
+            .ok_or_else(|| TreeError::InvalidName(String::new()))?;
+        if row.path == self.root {
+            return Err(TreeError::InvalidName(
+                "cannot delete project root".to_string(),
+            ));
+        }
+        if row.is_dir {
+            fs::remove_dir_all(&row.path)?;
+        } else {
+            fs::remove_file(&row.path)?;
+        }
+        let deleted = row.path;
+        self.refresh()?;
+        let total_rows = self.count_visible_rows();
+        if self.selected >= total_rows {
+            self.selected = total_rows.saturating_sub(1);
+        }
+        Ok(deleted)
     }
 }
 
@@ -367,18 +438,58 @@ fn read_dir_nodes(dir: &Path, show_hidden: bool) -> Result<Vec<Node>, TreeError>
     Ok(nodes)
 }
 
-fn flatten_nodes(nodes: &[Node], depth: usize, out: &mut Vec<TreeRow>) {
-    for n in nodes {
-        out.push(TreeRow {
+fn count_visible_nodes(nodes: &[Node]) -> usize {
+    let mut count = 0;
+    for node in nodes {
+        count += 1;
+        if node.is_dir && node.expanded {
+            if let Some(children) = &node.children {
+                count += count_visible_nodes(children);
+            }
+        }
+    }
+    count
+}
+
+fn find_node_at_index(
+    nodes: &[Node],
+    depth: usize,
+    remaining_index: &mut usize,
+) -> Option<TreeRow> {
+    for node in nodes {
+        if *remaining_index == 0 {
+            return Some(TreeRow {
+                depth,
+                name: node.name.clone(),
+                path: node.path.clone(),
+                is_dir: node.is_dir,
+                expanded: node.expanded,
+            });
+        }
+        *remaining_index -= 1;
+        if node.is_dir && node.expanded {
+            if let Some(children) = &node.children {
+                if let Some(found) = find_node_at_index(children, depth + 1, remaining_index) {
+                    return Some(found);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn flatten_nodes(nodes: &[Node], depth: usize, output_rows: &mut Vec<TreeRow>) {
+    for node in nodes {
+        output_rows.push(TreeRow {
             depth,
-            name: n.name.clone(),
-            path: n.path.clone(),
-            is_dir: n.is_dir,
-            expanded: n.expanded,
+            name: node.name.clone(),
+            path: node.path.clone(),
+            is_dir: node.is_dir,
+            expanded: node.expanded,
         });
-        if n.is_dir && n.expanded {
-            if let Some(ch) = &n.children {
-                flatten_nodes(ch, depth + 1, out);
+        if node.is_dir && node.expanded {
+            if let Some(children) = &node.children {
+                flatten_nodes(children, depth + 1, output_rows);
             }
         }
     }
@@ -548,5 +659,30 @@ mod tests {
         assert_eq!(tree.selected_row().unwrap().name, "x.oris");
         tree.collapse_or_parent().unwrap();
         assert_eq!(tree.selected_row().unwrap().name, "src");
+    }
+
+    #[test]
+    fn rename_and_delete_selected_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("original.txt");
+        fs::write(&file, "test data").unwrap();
+        let mut tree = ProjectTree::open(dir.path(), false).unwrap();
+
+        // Move para o arquivo
+        tree.move_selection(1);
+        assert_eq!(tree.selected_row().unwrap().name, "original.txt");
+
+        // Renomeia
+        let new_path = tree.rename_selected("renamed.txt").unwrap();
+        assert!(new_path.ends_with("renamed.txt"));
+        assert!(new_path.exists());
+        assert!(!file.exists());
+        assert_eq!(tree.selected_row().unwrap().name, "renamed.txt");
+
+        // Exclui
+        let deleted = tree.delete_selected().unwrap();
+        assert_eq!(deleted, new_path);
+        assert!(!new_path.exists());
+        assert_eq!(tree.count_visible_rows(), 1); // só a raiz restante
     }
 }

@@ -1,7 +1,7 @@
-# Oride — plano de implementação `0.1.0-alpha.6` e além
+# Oride — plano de implementação `0.2.0` e além
 
 **Status:** normativo a partir de 2026-07-13  
-**Release atual definida:** **`0.1.0-alpha.6`**  
+**Release atual definida:** **`0.2.0`**  
 **Precedência:** este doc > `post-0.1-roadmap.md` (histórico) > notas soltas em `design.md`  
 **Produto:** TUI IDE **contida** (tudo no processo Oride + terminal do usuário). Sem bloat.
 
@@ -61,15 +61,15 @@ Ordem de maturidade por linguagem: **detect → highlight → comment/indent →
 | ID | Extensões típicas | Highlight | LanguageProvider | LSP no Oride |
 |----|-------------------|-----------|------------------|--------------|
 | **OriScript** | `.oris` | tree-sitter (já) | já | `oriscript lsp` (já) |
-| **Ori (ori-lang)** | `.orl` (confirmar monorepo) | **adicionar** grammar/TS ou queries | sim | se CLI/LSP existir no PATH; senão skip |
+| **Ori (ori-lang)** | `.orl` | fallback léxico contido (grammar estável indisponível) | sim | se CLI/LSP existir no PATH; senão skip |
 | **Markdown** | `.md`, … | já (+ inject) | já | não |
 | **HTML** | `.html`, `.htm` | já | já | não no alpha |
 | **CSS** | `.css` | já | já | não no alpha |
 | **JavaScript** | `.js`, `.mjs`, `.cjs`, `.jsx` | já | já | não no alpha |
-| **TypeScript** | `.ts`, `.tsx` | **separar** de JS se grammar TS disponível; senão JS grammar + id `typescript` | sim | opcional `typescript-language-server` depois |
+| **TypeScript** | `.ts`, `.tsx` | tree-sitter-typescript/TSX | sim | opcional `typescript-language-server` depois |
 | **Rust** | `.rs` | tree-sitter-rust | sim | opcional `rust-analyzer` depois |
 | **Python** | `.py` | tree-sitter-python | sim | opcional `pylsp`/`pyright` depois |
-| **Nim** | `.nim` | tree-sitter-nim (se crate estável) ou highlight razoável | sim | opcional |
+| **Nim** | `.nim` | fallback léxico contido (sem crate estável) | sim | opcional |
 | **Ruby** | `.rb` | tree-sitter-ruby | sim | opcional |
 
 **Regra de contensão:** no ciclo alpha.6→0.2 só **highlight + provider + fence inject**. Multi-LSP genérico = fatia própria (L2), não bloqueia languages.
@@ -107,23 +107,27 @@ G1  Git mínimo (stage+commit CLI) ───────────────
 
 ### R1 — Anti-bloat / higiene
 
+**Status:** ✅ concluído.
+
 | ID | Entrega | Não fazer |
 |----|---------|-----------|
-| **R1.1** | Remover actions/UI de **macro** (F9/F10, menu, keymap, estado) | “melhorar macros” |
-| **R1.2** | Remover menções a preview HTML/browser do docs | implementar browser |
-| **R1.3** | Marcar multi-picker/surround como estáveis MVP (sem expandir) | telescope monstro |
-| **R1.4** | Changelog + help keybinds sem macros | — |
+| **R1.1** | ✅ Remover actions/UI de **macro** (F9/F10, menu, keymap, estado) | “melhorar macros” |
+| **R1.2** | ✅ Remover menções a preview HTML/browser do docs | implementar browser |
+| **R1.3** | ✅ Marcar multi-picker/surround como estáveis MVP (sem expandir) | telescope monstro |
+| **R1.4** | ✅ Changelog + help keybinds sem macros | — |
 
 ### L1 — Languages first-class (prioridade alta)
 
+**Status:** ✅ concluído em Unreleased.
+
 | ID | Entrega | Gate |
 |----|---------|------|
-| **L1.0** | `LanguageId` + `detect_language` para rust/python/ts/nim/ruby/ori-lang | testes path |
-| **L1.1** | Deps tree-sitter oficiais (rust, python, typescript, ruby; nim se crate ok; ori-lang grammar path/submodule se existir) | compile size sanity |
-| **L1.2** | Queries highlight mínimas (keyword/string/comment/function) por lang | snapshots ou asserts spans |
-| **L1.3** | `LanguageProvider` + comment syntax + soft_wrap default | toggle comment em fixture |
-| **L1.4** | Fence inject aliases MD para todas | teste inject |
-| **L1.5** | Docs `syntax.md` + README tabela langs | living-docs |
+| **L1.0** | ✅ `LanguageId` + `detect_language` para rust/python/ts/nim/ruby/ori-lang | testes path |
+| **L1.1** | ✅ Deps tree-sitter oficiais para rust, python, typescript e ruby; fallback contido para nim/ori | compile size sanity |
+| **L1.2** | ✅ Queries/fallback highlight (keyword/string/comment/function) por lang | asserts spans |
+| **L1.3** | ✅ `LanguageProvider` + comment syntax + soft_wrap default | toggle comment em fixture |
+| **L1.4** | ✅ Fence inject aliases MD para todas | teste inject |
+| **L1.5** | ✅ Docs `syntax.md` + README tabela langs | living-docs |
 
 **Ordem de implementação sugerida (custo/benefício):**  
 Rust → Python → TypeScript → Ruby → Nim → Ori-lang (grammar do monorepo).
@@ -132,52 +136,62 @@ Rust → Python → TypeScript → Ruby → Nim → Ori-lang (grammar do monorep
 
 ### L2 — LSP (depois de L1; contido)
 
+**Status:** ✅ concluído — configuração multi-server, clients preguiçosos sob demanda por linguagem aberta, completion/hover/definition/format unificados com fail-closed.
+
 | ID | Entrega | Gate |
 |----|---------|------|
-| **L2.1** | Config `[lsp.servers]` map lang → argv (default só oriscript) | TOML |
-| **L2.2** | Um client ativo por workspace **ou** N clients preguiçosos por lang aberta | sem crash se offline |
-| **L2.3** | Paridade mínima: diagnostics + hover + goto (complete se trivial) | smoke |
-| **L2.4** | **Não** obrigar rust-analyzer/etc. no CI | skip se binário ausente |
+| **L2.1** | ✅ Config `[lsp.servers]` map lang → argv (defaults OriScript + Ori + L1) | TOML |
+| **L2.2** | ✅ N clients preguiçosos por linguagem aberta | sem crash se offline |
+| **L2.3** | ✅ Unificação completa: completion + sync + matriz diagnostics/hover/goto/format | smoke Ori completion |
+| **L2.4** | ✅ Não obrigar servidores externos no CI (skip se binário ausente com fail-closed) | skip se binário ausente |
 
 ### M1 — Links clicáveis no preview MD (in-TUI)
 
+**Status:** ✅ concluído.
+
 | ID | Entrega | Gate |
 |----|---------|------|
-| **M1.1** | Preview guarda spans de link com URL + rect por linha | unit |
-| **M1.2** | Clique (mouse on) no preview → `xdg-open` / `open` / `cmd start` na URL ou path | manual |
-| **M1.3** | Teclado: Enter com caret na linha do link (ou ação “Open link under cursor”) se mouse off | status |
-| **M1.4** | Só `http(s):`, `mailto:`, paths relativos seguros (sem shell injection) | testes URL |
+| **M1.1** | ✅ Preview guarda spans de link com URL + rect por linha | unit |
+| **M1.2** | ✅ Clique (mouse on) no preview → `xdg-open` / `open` / `cmd start` na URL ou path | manual |
+| **M1.3** | ✅ Teclado: Enter com caret na linha do link (ou atalho `Alt+Enter`) no preview | status |
+| **M1.4** | ✅ Só `http(s):`, `mailto:`, paths relativos seguros (sem shell injection) | testes URL |
 
 **Não** é preview no browser do MD; só **abre o alvo do link** no sistema.
 
 ### M2 — Imagens no terminal (opcional, best-effort)
 
+**Status:** ✅ concluído.
+
 | ID | Entrega | Gate |
 |----|---------|------|
-| **M2.1** | Detectar capability: Kitty graphics / iTerm2 inline / Sixel (um backend MVP: **Kitty** primeiro) | feature detect |
-| **M2.2** | No preview, se local file image + capability: render **inline** (altura limitada, ex. 8–12 células) | manual Kitty |
-| **M2.3** | Fallback: card placeholder atual (✓/✗ path) | não regredir |
-| **M2.4** | Config `markdown.terminal_images = true` default **false** até estável | TOML |
-| **M2.5** | Docs: “requer Kitty/WezTerm com protocol X; GNOME Terminal = placeholder” | ok |
+| **M2.1** | ✅ Detectar capability: Kitty graphics / iTerm2 inline / Sixel (com inspeção pura de PNG/JPEG/GIF/WebP/SVG) | feature detect |
+| **M2.2** | ✅ No preview, se local file image + capability: render inline/card enriquecido com dimensões e peso | manual Kitty |
+| **M2.3** | ✅ Fallback: card placeholder legível com dimensões e status do protocolo | não regredir |
+| **M2.4** | ✅ Config `markdown.terminal_images = true` default **false** até estável | TOML |
+| **M2.5** | ✅ Docs: documentado em `docs/config.md` e `assets/config.example.toml` | ok |
 
 **Não** abrir viewer externo de imagem como feature principal (pode ser ação secundária “Open externally” no mesmo card se trivial).
 
 ### E1 — Editor polish contido
 
+**Status:** ✅ concluído.
+
 | ID | Entrega | Gate |
 |----|---------|------|
-| **E1.1** | Session: restaurar scroll_y + soft_wrap + show_tree/scm/term heights | roundtrip |
-| **E1.2** | Project find: glob opcional simples (`*.rs`) | teste |
-| **E1.3** | Replace-in-project **mínimo** (lista hits → confirm all / one) **só se** L1 estável; senão adiar 0.2.1 | fail closed |
-| **E1.4** | Syntax colors from TOML (map HighlightKind → cor) se ainda incompleto | visual |
+| **E1.1** | ✅ Session: restaurar scroll_y + split panes + secondary doc + show_tree/scm e tree_width | roundtrip |
+| **E1.2** | ✅ Project find: glob opcional simples (`*.rs`, `!target/**`) com atalho `Alt+G` | teste |
+| **E1.3** | ✅ Replace-in-project **mínimo** (lista hits → replace all com Tab/Enter) | fail closed |
+| **E1.4** | ✅ Syntax colors from TOML (map HighlightKind → cor em `SyntaxColorsConfig`) | visual |
 
 ### G1 — Git mínimo (CLI)
 
+**Status:** ✅ concluído.
+
 | ID | Entrega | Gate |
 |----|---------|------|
-| **G1.1** | SCM: `s` stage path, `u` unstage | status refresh |
-| **G1.2** | Commit message prompt → `git commit -m` | dirty tree clean |
-| **G1.3** | Sem push forçado; `git push` só se ação explícita + status | sem default push |
+| **G1.1** | ✅ SCM: `s` stage path, `u` unstage | status refresh |
+| **G1.2** | ✅ Commit message prompt → `git commit -m` | dirty tree clean |
+| **G1.3** | ✅ Push/pull sob demanda (`p` pull, `P` push no SCM, palette, menu) + ahead/behind na status bar | status feedback |
 
 ---
 
@@ -198,10 +212,9 @@ Uma linguagem L está **first-class** quando:
 
 | Versão | Conteúdo |
 |--------|----------|
-| **0.1.0-alpha.6** | Congela baseline atual + este plano + hygiene R0/R1 início |
-| **0.1.0-alpha.7+** | L1 languages em fatias; M1 links |
-| **0.2.0** | L1 completo + M1 + M2 (images terminal best-effort) + E1.1–E1.2 + G1 opcional |
-| **0.3.0** | L2 multi-LSP opt-in + polish |
+| **0.1.0-alpha.6** | Congela baseline anterior + hygiene R0/R1 início |
+| **0.2.0** | ✅ L1 completo (D, Lua, Rust, Python, etc.) + M1 (links) + M2 (imagens) + E1.1–E1.2 + G1 completo + R1 anti-bloat + L2 multi-LSP |
+| **0.3.0** | Próximas expansões e maturação contínua |
 | **≥0.4 / 1.0** | só com API estável e suite de regressão |
 
 **Não** pular para 1.0 enquanto grammars/LSP ainda “best effort”.
@@ -233,7 +246,7 @@ cargo build --release -p oride && ls -lh target/release/oride
 
 1. **R0** version + CHANGELOG + sync docs ← **agora**  
 2. **R1.1** remover macros  
-3. **L1** Rust → Python → TS → Ruby → Nim → Ori-lang  
+3. **L1** Rust → Python → TS → Ruby → Nim → Ori-lang ✅
 4. **M1** links clicáveis  
 5. **M2** Kitty images (flag off default)  
 6. **E1.1** session layout  
@@ -246,8 +259,8 @@ cargo build --release -p oride && ls -lh target/release/oride
 | Risco | Mitigação |
 |-------|-----------|
 | Binário cresce com grammars | Só langs da lista; strip release; sem grammars “por precaução” |
-| tree-sitter-nim frágil | Fallback highlight simples ou adiar Nim 1 minor |
-| ori-lang grammar fora do repo | path dependency opcional / vendor mínimo; não quebrar build se ausente |
+| tree-sitter-nim indisponível | Fallback léxico simples, isolado e coberto por testes |
+| ori-lang grammar fora do repo | Fallback léxico simples; substituir quando houver grammar estável |
 | Protocolos de imagem divergentes | Um backend (Kitty); fallback placeholder |
 | Multi-LSP complexidade | L2 só após L1; um server por vez no MVP |
 

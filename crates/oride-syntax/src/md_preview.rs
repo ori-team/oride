@@ -34,40 +34,248 @@ pub enum PreviewStyle {
     Strike,
     /// Texto secundário / dica.
     Dim,
+    /// Sintaxe destacada via gramática.
+    Syntax(crate::HighlightKind),
+}
+
+/// Link detectado no preview com intervalo de colunas lógicas na linha.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreviewLink {
+    pub start_col: usize,
+    pub end_col: usize,
+    pub url: String,
 }
 
 /// Uma linha do painel de preview.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PreviewLine {
     pub segments: Vec<(String, PreviewStyle)>,
+    pub links: Vec<PreviewLink>,
 }
 
 impl PreviewLine {
-    fn plain(s: impl Into<String>) -> Self {
+    pub fn plain(s: impl Into<String>) -> Self {
         Self {
             segments: vec![(s.into(), PreviewStyle::Normal)],
+            links: Vec::new(),
         }
     }
 
-    fn styled(s: impl Into<String>, style: PreviewStyle) -> Self {
+    pub fn styled(s: impl Into<String>, style: PreviewStyle) -> Self {
         Self {
             segments: vec![(s.into(), style)],
+            links: Vec::new(),
         }
     }
 
-    fn empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             segments: vec![(" ".into(), PreviewStyle::Normal)],
+            links: Vec::new(),
         }
     }
 
-    fn multi(segments: Vec<(String, PreviewStyle)>) -> Self {
+    pub fn multi(segments: Vec<(String, PreviewStyle)>) -> Self {
         if segments.is_empty() {
             Self::empty()
         } else {
-            Self { segments }
+            Self {
+                segments,
+                links: Vec::new(),
+            }
         }
     }
+
+    #[must_use]
+    pub fn with_links(mut self, links: Vec<PreviewLink>) -> Self {
+        self.links = links;
+        self
+    }
+
+    #[must_use]
+    pub fn link_at_col(&self, col: usize) -> Option<&PreviewLink> {
+        self.links
+            .iter()
+            .find(|l| col >= l.start_col && col <= l.end_col)
+    }
+
+    #[must_use]
+    pub fn first_link(&self) -> Option<&PreviewLink> {
+        self.links.first()
+    }
+}
+
+/// Metadados extraídos de cabeçalho de imagem (PNG, JPEG, GIF, SVG, WebP).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImageMetadata {
+    pub format: &'static str,
+    pub dimensions: Option<(u32, u32)>,
+    pub file_size_bytes: u64,
+}
+
+/// Capacidade de renderização gráfica do terminal corrente.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerminalGraphicsCapability {
+    None,
+    Kitty,
+    Sixel,
+    Iterm2,
+}
+
+/// Detecta dinamicamente a compatibilidade do emulador de terminal com protocolos de imagem.
+#[must_use]
+pub fn detect_terminal_graphics() -> TerminalGraphicsCapability {
+    if std::env::var("KITTY_WINDOW_ID").is_ok()
+        || std::env::var("GHOSTTY_RESOURCES_DIR").is_ok()
+        || std::env::var("WEZTERM_PANE").is_ok()
+    {
+        return TerminalGraphicsCapability::Kitty;
+    }
+    if let Ok(term) = std::env::var("TERM") {
+        let term_lower = term.to_ascii_lowercase();
+        if term_lower.contains("kitty") || term_lower.contains("ghostty") {
+            return TerminalGraphicsCapability::Kitty;
+        }
+        if term_lower.contains("sixel") || term_lower.contains("foot") {
+            return TerminalGraphicsCapability::Sixel;
+        }
+        if term_lower.contains("iterm") {
+            return TerminalGraphicsCapability::Iterm2;
+        }
+    }
+    if let Ok(term_prog) = std::env::var("TERM_PROGRAM") {
+        let prog_lower = term_prog.to_ascii_lowercase();
+        if prog_lower.contains("wezterm")
+            || prog_lower.contains("ghostty")
+            || prog_lower.contains("kitty")
+        {
+            return TerminalGraphicsCapability::Kitty;
+        }
+        if prog_lower.contains("iterm") {
+            return TerminalGraphicsCapability::Iterm2;
+        }
+    }
+    TerminalGraphicsCapability::None
+}
+
+/// Formata contagem de bytes para string legível (B, KB, MB).
+#[must_use]
+pub fn format_file_size(bytes: u64) -> String {
+    if bytes < 1024 {
+        format!("{bytes} B")
+    } else if bytes < 1024 * 1024 {
+        format!("{:.1} KB", bytes as f64 / 1024.0)
+    } else {
+        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    }
+}
+
+/// Inspeciona o cabeçalho de um arquivo local de imagem sem dependência de bibliotecas externas pesadas.
+#[must_use]
+pub fn inspect_image_file(path: &Path) -> Option<ImageMetadata> {
+    let file_size_bytes = std::fs::metadata(path).ok()?.len();
+    let file = std::fs::File::open(path).ok()?;
+    use std::io::Read;
+    let mut header = [0u8; 1024];
+    let mut reader = std::io::BufReader::new(file);
+    let bytes_read = reader.read(&mut header).ok()?;
+    let bytes = &header[..bytes_read];
+
+    // PNG: \x89PNG\r\n\x1a\n seguido de IHDR
+    if bytes.starts_with(b"\x89PNG\r\n\x1a\n") && bytes.len() >= 24 {
+        let width = u32::from_be_bytes(bytes[16..20].try_into().ok()?);
+        let height = u32::from_be_bytes(bytes[20..24].try_into().ok()?);
+        return Some(ImageMetadata {
+            format: "PNG",
+            dimensions: Some((width, height)),
+            file_size_bytes,
+        });
+    }
+
+    // GIF: GIF87a ou GIF89a
+    if (bytes.starts_with(b"GIF87a") || bytes.starts_with(b"GIF89a")) && bytes.len() >= 10 {
+        let width = u16::from_le_bytes(bytes[6..8].try_into().ok()?) as u32;
+        let height = u16::from_le_bytes(bytes[8..10].try_into().ok()?) as u32;
+        return Some(ImageMetadata {
+            format: "GIF",
+            dimensions: Some((width, height)),
+            file_size_bytes,
+        });
+    }
+
+    // JPEG: \xFF\xD8
+    if bytes.starts_with(b"\xFF\xD8") {
+        let mut dimensions = None;
+        let mut i = 2;
+        while i + 4 <= bytes.len() {
+            if bytes[i] != 0xFF {
+                i += 1;
+                continue;
+            }
+            let marker = bytes[i + 1];
+            if matches!(marker, 0xC0..=0xC3 | 0xC5..=0xC7 | 0xC9..=0xCB | 0xCD..=0xCF)
+                && i + 9 <= bytes.len()
+            {
+                let height = u16::from_be_bytes(bytes[i + 5..i + 7].try_into().ok()?) as u32;
+                let width = u16::from_be_bytes(bytes[i + 7..i + 9].try_into().ok()?) as u32;
+                dimensions = Some((width, height));
+                break;
+            }
+            let segment_len = u16::from_be_bytes(bytes[i + 2..i + 4].try_into().ok()?) as usize;
+            i += 2 + segment_len;
+        }
+        return Some(ImageMetadata {
+            format: "JPEG",
+            dimensions,
+            file_size_bytes,
+        });
+    }
+
+    // WebP: RIFF .... WEBP
+    if bytes.starts_with(b"RIFF") && bytes.len() >= 30 && &bytes[8..12] == b"WEBP" {
+        let mut dimensions = None;
+        if &bytes[12..16] == b"VP8 " && bytes.len() >= 30 {
+            if bytes[23..26] == [0x9d, 0x01, 0x2a] {
+                let width = (u16::from_le_bytes(bytes[26..28].try_into().ok()?) & 0x3fff) as u32;
+                let height = (u16::from_le_bytes(bytes[28..30].try_into().ok()?) & 0x3fff) as u32;
+                dimensions = Some((width, height));
+            }
+        } else if &bytes[12..16] == b"VP8L" && bytes.len() >= 25 {
+            if bytes[20] == 0x2f {
+                let b1 = bytes[21] as u32;
+                let b2 = bytes[22] as u32;
+                let b3 = bytes[23] as u32;
+                let b4 = bytes[24] as u32;
+                let width = 1 + (((b2 & 0x3f) << 8) | b1);
+                let height = 1 + (((b4 & 0x0f) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6));
+                dimensions = Some((width, height));
+            }
+        } else if &bytes[12..16] == b"VP8X" && bytes.len() >= 30 {
+            let width =
+                1 + (bytes[24] as u32 | ((bytes[25] as u32) << 8) | ((bytes[26] as u32) << 16));
+            let height =
+                1 + (bytes[27] as u32 | ((bytes[28] as u32) << 8) | ((bytes[29] as u32) << 16));
+            dimensions = Some((width, height));
+        }
+        return Some(ImageMetadata {
+            format: "WebP",
+            dimensions,
+            file_size_bytes,
+        });
+    }
+
+    // SVG
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        if text.contains("<svg") {
+            return Some(ImageMetadata {
+                format: "SVG",
+                dimensions: None,
+                file_size_bytes,
+            });
+        }
+    }
+
+    None
 }
 
 /// Renderiza Markdown simples (sem base path — imagens sem check de disco).
@@ -80,9 +288,17 @@ pub fn render_preview_lines(source: &str) -> Vec<PreviewLine> {
 /// (normalmente o diretório do arquivo `.md` aberto).
 #[must_use]
 pub fn render_preview_lines_in(source: &str, base_dir: Option<&Path>) -> Vec<PreviewLine> {
+    render_preview_lines_with_config(source, base_dir, false)
+}
+
+/// Renderiza Markdown com configuração de suporte a imagens de terminal.
+#[must_use]
+pub fn render_preview_lines_with_config(
+    source: &str,
+    base_dir: Option<&Path>,
+    terminal_images: bool,
+) -> Vec<PreviewLine> {
     let mut out = Vec::new();
-    let mut in_fence = false;
-    let mut fence_lang = String::new();
     let lines: Vec<&str> = source.lines().collect();
     let mut idx = 0usize;
 
@@ -109,29 +325,60 @@ pub fn render_preview_lines_in(source: &str, base_dir: Option<&Path>) -> Vec<Pre
 
         // fences
         if let Some(rest) = line.strip_prefix("```") {
-            if in_fence {
-                in_fence = false;
-                fence_lang.clear();
-                out.push(PreviewLine::styled("└───", PreviewStyle::Hr));
+            let fence_lang = rest.trim();
+            let label = if fence_lang.is_empty() {
+                "code".to_string()
             } else {
-                in_fence = true;
-                fence_lang = rest.trim().to_string();
-                let label = if fence_lang.is_empty() {
-                    "code".into()
-                } else {
-                    fence_lang.clone()
-                };
-                out.push(PreviewLine::styled(
-                    format!("┌ {label}"),
-                    PreviewStyle::FenceLang,
-                ));
+                fence_lang.to_string()
+            };
+            out.push(PreviewLine::styled(
+                format!("┌ {label}"),
+                PreviewStyle::FenceLang,
+            ));
+            idx += 1;
+
+            let lang_id = crate::markdown::fence_lang_alias(fence_lang);
+            let mut code_lines = Vec::new();
+            while idx < lines.len() {
+                if lines[idx].trim_start().starts_with("```") {
+                    idx += 1;
+                    break;
+                }
+                code_lines.push(lines[idx]);
+                idx += 1;
             }
-            idx += 1;
-            continue;
-        }
-        if in_fence {
-            out.push(PreviewLine::styled(format!("│ {line}"), PreviewStyle::Code));
-            idx += 1;
+
+            if let Some(lang) = lang_id {
+                let code_block = code_lines.join("\n");
+                let highlights = crate::highlight::highlight_language_slice(lang, &code_block, 0);
+                let mut line_offset = 0;
+                for code_line in code_lines {
+                    let mut segs = vec![("│ ".to_string(), PreviewStyle::FenceLang)];
+                    let spans = crate::highlight::line_spans(code_line, line_offset, &highlights);
+                    if spans.is_empty() {
+                        segs.push((code_line.to_string(), PreviewStyle::Code));
+                    } else {
+                        for (token, kind) in spans {
+                            let style = if kind == crate::HighlightKind::Normal {
+                                PreviewStyle::Code
+                            } else {
+                                PreviewStyle::Syntax(kind)
+                            };
+                            segs.push((token.to_string(), style));
+                        }
+                    }
+                    out.push(PreviewLine::multi(segs));
+                    line_offset += code_line.len() + 1;
+                }
+            } else {
+                for code_line in code_lines {
+                    out.push(PreviewLine::styled(
+                        format!("│ {code_line}"),
+                        PreviewStyle::Code,
+                    ));
+                }
+            }
+            out.push(PreviewLine::styled("└───", PreviewStyle::Hr));
             continue;
         }
 
@@ -143,9 +390,10 @@ pub fn render_preview_lines_in(source: &str, base_dir: Option<&Path>) -> Vec<Pre
                 && (next.chars().all(|c| c == '=') || next.chars().all(|c| c == '-'))
             {
                 let level = if next.starts_with('=') { 1u8 } else { 2u8 };
-                out.push(PreviewLine {
-                    segments: vec![(line.trim().to_string(), PreviewStyle::Heading(level))],
-                });
+                out.push(PreviewLine::styled(
+                    line.trim().to_string(),
+                    PreviewStyle::Heading(level),
+                ));
                 if level == 1 {
                     out.push(PreviewLine::styled("════════", PreviewStyle::Heading(1)));
                 } else {
@@ -172,9 +420,19 @@ pub fn render_preview_lines_in(source: &str, base_dir: Option<&Path>) -> Vec<Pre
                 3 => "▒ ",
                 _ => "· ",
             };
+            let (inlines, links) = inline_segments_and_links(text, base_dir, false);
+            let mark_len = mark.chars().count();
+            let shifted_links = links
+                .into_iter()
+                .map(|mut l| {
+                    l.start_col += mark_len;
+                    l.end_col += mark_len;
+                    l
+                })
+                .collect();
             let mut segs = vec![(mark.into(), PreviewStyle::Heading(level))];
-            segs.extend(inline_segments(text, base_dir, false));
-            out.push(PreviewLine::multi(segs));
+            segs.extend(inlines);
+            out.push(PreviewLine::multi(segs).with_links(shifted_links));
             if level <= 2 {
                 out.push(PreviewLine::empty());
             }
@@ -184,15 +442,23 @@ pub fn render_preview_lines_in(source: &str, base_dir: Option<&Path>) -> Vec<Pre
 
         // blockquote (com inline)
         if let Some(rest) = line.trim_start().strip_prefix("> ") {
+            let (inlines, links) = inline_segments_and_links(rest, base_dir, false);
+            let shifted_links = links
+                .into_iter()
+                .map(|mut l| {
+                    l.start_col += 2;
+                    l.end_col += 2;
+                    l
+                })
+                .collect();
             let mut segs = vec![("│ ".into(), PreviewStyle::Quote)];
-            segs.extend(inline_segments(rest, base_dir, false));
-            // força quote nos inlines de texto normal
-            for s in &mut segs {
+            for mut s in inlines {
                 if matches!(s.1, PreviewStyle::Normal) {
                     s.1 = PreviewStyle::Quote;
                 }
+                segs.push(s);
             }
-            out.push(PreviewLine::multi(segs));
+            out.push(PreviewLine::multi(segs).with_links(shifted_links));
             idx += 1;
             continue;
         }
@@ -202,48 +468,70 @@ pub fn render_preview_lines_in(source: &str, base_dir: Option<&Path>) -> Vec<Pre
             continue;
         }
 
-        // table row
+        // table block
         if is_table_row(line) {
-            // skip separator |---|
-            if is_table_sep(line) {
-                out.push(PreviewLine::styled(
-                    format!("  {}", normalize_table_sep(line)),
-                    PreviewStyle::Dim,
-                ));
-            } else {
-                out.push(PreviewLine::styled(
-                    format!("  {}", format_table_row(line)),
-                    PreviewStyle::Table,
-                ));
+            let mut table_lines = Vec::new();
+            while idx < lines.len() && is_table_row(lines[idx]) {
+                table_lines.push(lines[idx]);
+                idx += 1;
             }
-            idx += 1;
+            out.extend(format_table_block(&table_lines, base_dir));
             continue;
         }
 
         // task list
         if let Some((done, rest)) = strip_task(line) {
             let mark = if done { " ☑ " } else { " ☐ " };
+            let (inlines, links) = inline_segments_and_links(rest, base_dir, false);
+            let shifted_links = links
+                .into_iter()
+                .map(|mut l| {
+                    l.start_col += 3;
+                    l.end_col += 3;
+                    l
+                })
+                .collect();
             let mut segs = vec![(mark.into(), PreviewStyle::ListMarker)];
-            segs.extend(inline_segments(rest, base_dir, false));
-            out.push(PreviewLine::multi(segs));
+            segs.extend(inlines);
+            out.push(PreviewLine::multi(segs).with_links(shifted_links));
             idx += 1;
             continue;
         }
 
         // list unordered
         if let Some(rest) = strip_ul(line) {
+            let (inlines, links) = inline_segments_and_links(rest, base_dir, false);
+            let shifted_links = links
+                .into_iter()
+                .map(|mut l| {
+                    l.start_col += 3;
+                    l.end_col += 3;
+                    l
+                })
+                .collect();
             let mut segs = vec![(" • ".into(), PreviewStyle::ListMarker)];
-            segs.extend(inline_segments(rest, base_dir, false));
-            out.push(PreviewLine::multi(segs));
+            segs.extend(inlines);
+            out.push(PreviewLine::multi(segs).with_links(shifted_links));
             idx += 1;
             continue;
         }
 
         // list ordered
         if let Some((num, rest)) = strip_ol(line) {
-            let mut segs = vec![(format!(" {num}. "), PreviewStyle::ListMarker)];
-            segs.extend(inline_segments(rest, base_dir, false));
-            out.push(PreviewLine::multi(segs));
+            let prefix = format!(" {num}. ");
+            let prefix_len = prefix.chars().count();
+            let (inlines, links) = inline_segments_and_links(rest, base_dir, false);
+            let shifted_links = links
+                .into_iter()
+                .map(|mut l| {
+                    l.start_col += prefix_len;
+                    l.end_col += prefix_len;
+                    l
+                })
+                .collect();
+            let mut segs = vec![(prefix, PreviewStyle::ListMarker)];
+            segs.extend(inlines);
+            out.push(PreviewLine::multi(segs).with_links(shifted_links));
             idx += 1;
             continue;
         }
@@ -257,13 +545,14 @@ pub fn render_preview_lines_in(source: &str, base_dir: Option<&Path>) -> Vec<Pre
 
         // linha só com imagem → card multi-linha
         if let Some((alt, url)) = parse_standalone_image(line) {
-            out.extend(image_card(&alt, &url, base_dir));
+            out.extend(image_card(&alt, &url, base_dir, terminal_images));
             idx += 1;
             continue;
         }
 
         // parágrafo com inline (imagens inline → card compacto no fluxo)
-        out.push(PreviewLine::multi(inline_segments(line, base_dir, true)));
+        let (segs, links) = inline_segments_and_links(line, base_dir, true);
+        out.push(PreviewLine::multi(segs).with_links(links));
         idx += 1;
     }
 
@@ -294,19 +583,174 @@ fn is_table_sep(line: &str) -> bool {
             .all(|c| c == '-' || c == ':' || c == '|' || c == ' ')
 }
 
-fn format_table_row(line: &str) -> String {
-    let cells: Vec<&str> = line
-        .trim()
-        .trim_matches('|')
-        .split('|')
-        .map(str::trim)
-        .collect();
-    cells.join(" │ ")
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum TableAlignment {
+    Left,
+    Center,
+    Right,
 }
 
-fn normalize_table_sep(line: &str) -> String {
-    let n = line.matches('|').count().saturating_sub(1).max(1);
-    (0..n).map(|_| "───").collect::<Vec<_>>().join("─┼─")
+fn parse_table_alignment(cell: &str) -> TableAlignment {
+    let trimmed = cell.trim();
+    let starts = trimmed.starts_with(':');
+    let ends = trimmed.ends_with(':');
+    if starts && ends {
+        TableAlignment::Center
+    } else if ends {
+        TableAlignment::Right
+    } else {
+        TableAlignment::Left
+    }
+}
+
+fn parse_table_cells(line: &str) -> Vec<String> {
+    let t = line.trim();
+    let content = t.strip_prefix('|').unwrap_or(t);
+    let content = content.strip_suffix('|').unwrap_or(content);
+    content.split('|').map(|c| c.trim().to_string()).collect()
+}
+
+fn format_table_block(table_lines: &[&str], base_dir: Option<&Path>) -> Vec<PreviewLine> {
+    if table_lines.is_empty() {
+        return Vec::new();
+    }
+    let mut raw_rows: Vec<Vec<String>> = Vec::new();
+    let mut sep_index = None;
+
+    for (i, line) in table_lines.iter().enumerate() {
+        if is_table_sep(line) {
+            if sep_index.is_none() {
+                sep_index = Some(i);
+            }
+        } else {
+            raw_rows.push(parse_table_cells(line));
+        }
+    }
+
+    if raw_rows.is_empty() {
+        return Vec::new();
+    }
+
+    let num_cols = raw_rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    if num_cols == 0 {
+        return Vec::new();
+    }
+
+    let mut alignments = vec![TableAlignment::Left; num_cols];
+    if let Some(sep_idx) = sep_index {
+        let sep_cells = parse_table_cells(table_lines[sep_idx]);
+        for (col, cell) in sep_cells.iter().enumerate().take(num_cols) {
+            alignments[col] = parse_table_alignment(cell);
+        }
+    }
+
+    for row in &mut raw_rows {
+        while row.len() < num_cols {
+            row.push(String::new());
+        }
+    }
+
+    let mut col_widths = vec![3usize; num_cols];
+    for row in &raw_rows {
+        for (col, cell) in row.iter().enumerate() {
+            let char_count = cell.chars().count();
+            if char_count > col_widths[col] {
+                col_widths[col] = char_count;
+            }
+        }
+    }
+
+    let mut out = Vec::new();
+
+    // Top border: ┌───┬───┐
+    let mut top_border = String::from("  ┌");
+    for (col, &w) in col_widths.iter().enumerate() {
+        top_border.push_str(&"─".repeat(w + 2));
+        if col + 1 < num_cols {
+            top_border.push('┬');
+        } else {
+            top_border.push('┐');
+        }
+    }
+    out.push(PreviewLine::styled(top_border, PreviewStyle::Dim));
+
+    let has_header = sep_index.is_some() && !raw_rows.is_empty();
+
+    for (row_idx, row) in raw_rows.iter().enumerate() {
+        let mut row_segs = Vec::new();
+        let mut row_links = Vec::new();
+        row_segs.push(("  │".to_string(), PreviewStyle::Dim));
+        let mut current_col = 3;
+
+        for (col, cell) in row.iter().enumerate() {
+            let w = col_widths[col];
+            let cell_count = cell.chars().count();
+            let pad = w.saturating_sub(cell_count);
+            let (left_pad, right_pad) = match alignments[col] {
+                TableAlignment::Left => (1, pad + 1),
+                TableAlignment::Right => (pad + 1, 1),
+                TableAlignment::Center => {
+                    let half = pad / 2;
+                    (half + 1, pad - half + 1)
+                }
+            };
+            if left_pad > 0 {
+                row_segs.push((" ".repeat(left_pad), PreviewStyle::Table));
+                current_col += left_pad;
+            }
+            let (inlines, links) = inline_segments_and_links(cell, base_dir, false);
+            for mut link in links {
+                link.start_col += current_col;
+                link.end_col += current_col;
+                row_links.push(link);
+            }
+            for (text, style) in inlines {
+                let text_len = text.chars().count();
+                current_col += text_len;
+                let cell_style = if style == PreviewStyle::Normal {
+                    PreviewStyle::Table
+                } else {
+                    style
+                };
+                row_segs.push((text, cell_style));
+            }
+            if right_pad > 0 {
+                row_segs.push((" ".repeat(right_pad), PreviewStyle::Table));
+                current_col += right_pad;
+            }
+            row_segs.push(("│".to_string(), PreviewStyle::Dim));
+            current_col += 1;
+        }
+        out.push(PreviewLine::multi(row_segs).with_links(row_links));
+
+        // Header separator: ├───┼───┤
+        if has_header && row_idx == 0 && raw_rows.len() > 1 {
+            let mut mid_border = String::from("  ├");
+            for (col, &w) in col_widths.iter().enumerate() {
+                mid_border.push_str(&"─".repeat(w + 2));
+                if col + 1 < num_cols {
+                    mid_border.push('┼');
+                } else {
+                    mid_border.push('┤');
+                }
+            }
+            out.push(PreviewLine::styled(mid_border, PreviewStyle::Dim));
+        }
+    }
+
+    // Bottom border: └───┴───┘
+    let mut bot_border = String::from("  └");
+    for (col, &w) in col_widths.iter().enumerate() {
+        bot_border.push_str(&"─".repeat(w + 2));
+        if col + 1 < num_cols {
+            bot_border.push('┴');
+        } else {
+            bot_border.push('┘');
+        }
+    }
+    out.push(PreviewLine::styled(bot_border, PreviewStyle::Dim));
+
+    out
 }
 
 fn parse_atx_heading(line: &str) -> Option<(u8, &str)> {
@@ -396,14 +840,21 @@ fn parse_standalone_image(line: &str) -> Option<(String, String)> {
     }
 }
 
-fn image_card(alt: &str, url: &str, base_dir: Option<&Path>) -> Vec<PreviewLine> {
+fn image_card(
+    alt: &str,
+    url: &str,
+    base_dir: Option<&Path>,
+    terminal_images: bool,
+) -> Vec<PreviewLine> {
     let alt_show = if alt.is_empty() {
         "(sem texto alt)"
     } else {
         alt
     };
-    let (path_line, status_style, status_note) = describe_image_target(url, base_dir);
-    vec![
+    let (path_line, status_style, status_note, meta_note) =
+        describe_image_target(url, base_dir, terminal_images);
+
+    let mut lines = vec![
         PreviewLine::styled("┌ 🖼  imagem", PreviewStyle::Image),
         PreviewLine::multi(vec![
             ("│  ".into(), PreviewStyle::Image),
@@ -412,22 +863,41 @@ fn image_card(alt: &str, url: &str, base_dir: Option<&Path>) -> Vec<PreviewLine>
         PreviewLine::multi(vec![
             ("│  ".into(), PreviewStyle::Image),
             (path_line, PreviewStyle::ImagePath),
-        ]),
-        PreviewLine::multi(vec![
+        ])
+        .with_links(vec![PreviewLink {
+            start_col: 0,
+            end_col: usize::MAX,
+            url: url.to_string(),
+        }]),
+    ];
+
+    if let Some(meta) = meta_note {
+        lines.push(PreviewLine::multi(vec![
             ("│  ".into(), PreviewStyle::Image),
-            (status_note, status_style),
-        ]),
-        PreviewLine::styled("└", PreviewStyle::Image),
-    ]
+            (meta, PreviewStyle::Dim),
+        ]));
+    }
+
+    lines.push(PreviewLine::multi(vec![
+        ("│  ".into(), PreviewStyle::Image),
+        (status_note, status_style),
+    ]));
+    lines.push(PreviewLine::styled("└", PreviewStyle::Image));
+    lines
 }
 
-fn describe_image_target(url: &str, base_dir: Option<&Path>) -> (String, PreviewStyle, String) {
+fn describe_image_target(
+    url: &str,
+    base_dir: Option<&Path>,
+    terminal_images: bool,
+) -> (String, PreviewStyle, String, Option<String>) {
     let url = url.trim();
     if url.is_empty() {
         return (
             "(sem path)".into(),
             PreviewStyle::ImageMissing,
             "⚠ path vazio".into(),
+            None,
         );
     }
     if url.starts_with("http://") || url.starts_with("https://") || url.starts_with("data:") {
@@ -435,6 +905,7 @@ fn describe_image_target(url: &str, base_dir: Option<&Path>) -> (String, Preview
             truncate_mid(url, 48),
             PreviewStyle::Dim,
             "🔗 URL remota · não embutida no TUI".into(),
+            None,
         );
     }
     // local path
@@ -448,22 +919,50 @@ fn describe_image_target(url: &str, base_dir: Option<&Path>) -> (String, Preview
     };
     let display = truncate_mid(&resolved.display().to_string(), 48);
     if resolved.is_file() {
-        (
-            display,
-            PreviewStyle::ImageOk,
-            "✓ arquivo local encontrado".into(),
-        )
+        let meta = inspect_image_file(&resolved);
+        let meta_str = meta.as_ref().map(|m| {
+            let size = format_file_size(m.file_size_bytes);
+            if let Some((w, h)) = m.dimensions {
+                format!("{} · {}x{} px · {}", m.format, w, h, size)
+            } else {
+                format!("{} · {}", m.format, size)
+            }
+        });
+
+        let cap = detect_terminal_graphics();
+        let status = if terminal_images {
+            match cap {
+                TerminalGraphicsCapability::Kitty => {
+                    "✓ arquivo local · Kitty Graphics ativo".into()
+                }
+                TerminalGraphicsCapability::Sixel => {
+                    "✓ arquivo local · Sixel Graphics ativo".into()
+                }
+                TerminalGraphicsCapability::Iterm2 => {
+                    "✓ arquivo local · iTerm2 Protocol ativo".into()
+                }
+                TerminalGraphicsCapability::None => {
+                    "✓ arquivo local encontrado (terminal sem suporte gráfico)".into()
+                }
+            }
+        } else {
+            "✓ arquivo local encontrado".into()
+        };
+
+        (display, PreviewStyle::ImageOk, status, meta_str)
     } else if resolved.exists() {
         (
             display,
             PreviewStyle::ImageMissing,
             "⚠ path existe mas não é arquivo".into(),
+            None,
         )
     } else {
         (
             display,
             PreviewStyle::ImageMissing,
             "✗ arquivo não encontrado".into(),
+            None,
         )
     }
 }
@@ -480,21 +979,28 @@ fn truncate_mid(s: &str, max: usize) -> String {
 }
 
 /// Inline: code, bold, italic, strike, image, link.
-/// `expand_images`: se true, imagem vira `🖼 alt` compacto (não card).
-fn inline_segments(
+/// Retorna segmentos visuais e metadados de links com intervalo de colunas lógicas.
+fn inline_segments_and_links(
     text: &str,
     base_dir: Option<&Path>,
     expand_images: bool,
-) -> Vec<(String, PreviewStyle)> {
+) -> (Vec<(String, PreviewStyle)>, Vec<PreviewLink>) {
     let _ = base_dir; // reservado para tooltips futuros
     let mut out = Vec::new();
+    let mut links = Vec::new();
     let chars: Vec<char> = text.chars().collect();
     let mut i = 0;
     let mut buf = String::new();
+    let mut current_col = 0usize;
 
-    let flush = |buf: &mut String, out: &mut Vec<(String, PreviewStyle)>, style: PreviewStyle| {
+    let flush = |buf: &mut String,
+                 out: &mut Vec<(String, PreviewStyle)>,
+                 style: PreviewStyle,
+                 col: &mut usize| {
         if !buf.is_empty() {
-            out.push((std::mem::take(buf), style));
+            let s = std::mem::take(buf);
+            *col += s.chars().count();
+            out.push((s, style));
         }
     };
 
@@ -502,22 +1008,32 @@ fn inline_segments(
         // image ![alt](url) — antes de link
         if chars[i] == '!' && chars.get(i + 1) == Some(&'[') {
             if let Some((alt, url, next)) = parse_image(&chars, i) {
-                flush(&mut buf, &mut out, PreviewStyle::Normal);
+                flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
+                let link_start = current_col;
                 if expand_images {
                     let label = if alt.is_empty() {
                         "🖼".into()
                     } else {
                         format!("🖼 {alt}")
                     };
+                    current_col += label.chars().count();
                     out.push((label, PreviewStyle::Image));
                     if !url.is_empty() {
-                        out.push((format!(" ({})", truncate_mid(&url, 24)), PreviewStyle::Dim));
+                        let note = format!(" ({})", truncate_mid(&url, 24));
+                        current_col += note.chars().count();
+                        out.push((note, PreviewStyle::Dim));
                     }
                 } else {
-                    out.push((
-                        format!("🖼 {}", if alt.is_empty() { "img" } else { &alt }),
-                        PreviewStyle::Image,
-                    ));
+                    let label = format!("🖼 {}", if alt.is_empty() { "img" } else { &alt });
+                    current_col += label.chars().count();
+                    out.push((label, PreviewStyle::Image));
+                }
+                if !url.is_empty() {
+                    links.push(PreviewLink {
+                        start_col: link_start,
+                        end_col: current_col,
+                        url,
+                    });
                 }
                 i = next;
                 continue;
@@ -526,14 +1042,16 @@ fn inline_segments(
 
         // code `...`
         if chars[i] == '`' {
-            flush(&mut buf, &mut out, PreviewStyle::Normal);
+            flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
             i += 1;
             let start = i;
             while i < chars.len() && chars[i] != '`' {
                 i += 1;
             }
             let code: String = chars[start..i].iter().collect();
-            out.push((format!(" {code} "), PreviewStyle::Code));
+            let seg = format!(" {code} ");
+            current_col += seg.chars().count();
+            out.push((seg, PreviewStyle::Code));
             if i < chars.len() {
                 i += 1;
             }
@@ -542,13 +1060,14 @@ fn inline_segments(
 
         // ~~strike~~
         if i + 1 < chars.len() && chars[i] == '~' && chars[i + 1] == '~' {
-            flush(&mut buf, &mut out, PreviewStyle::Normal);
+            flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
             i += 2;
             let start = i;
             while i + 1 < chars.len() && !(chars[i] == '~' && chars[i + 1] == '~') {
                 i += 1;
             }
             let s: String = chars[start..i].iter().collect();
+            current_col += s.chars().count();
             out.push((s, PreviewStyle::Strike));
             if i + 1 < chars.len() {
                 i += 2;
@@ -562,13 +1081,14 @@ fn inline_segments(
                 || (chars[i] == '_' && chars[i + 1] == '_'))
         {
             let mark = chars[i];
-            flush(&mut buf, &mut out, PreviewStyle::Normal);
+            flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
             i += 2;
             let start = i;
             while i + 1 < chars.len() && !(chars[i] == mark && chars[i + 1] == mark) {
                 i += 1;
             }
             let bold: String = chars[start..i].iter().collect();
+            current_col += bold.chars().count();
             out.push((bold, PreviewStyle::Bold));
             if i + 1 < chars.len() {
                 i += 2;
@@ -585,13 +1105,14 @@ fn inline_segments(
                 i += 1;
                 continue;
             }
-            flush(&mut buf, &mut out, PreviewStyle::Normal);
+            flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
             i += 1;
             let start = i;
             while i < chars.len() && chars[i] != mark {
                 i += 1;
             }
             let it: String = chars[start..i].iter().collect();
+            current_col += it.chars().count();
             out.push((it, PreviewStyle::Italic));
             if i < chars.len() {
                 i += 1;
@@ -602,11 +1123,21 @@ fn inline_segments(
         // [text](url) link
         if chars[i] == '[' {
             if let Some((label, url, next)) = parse_link(&chars, i) {
-                flush(&mut buf, &mut out, PreviewStyle::Normal);
+                flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
+                let link_start = current_col;
+                current_col += label.chars().count();
                 out.push((label, PreviewStyle::Link));
                 if !url.is_empty() {
-                    out.push((format!(" → {}", truncate_mid(&url, 28)), PreviewStyle::Dim));
+                    let arrow = format!(" → {}", truncate_mid(&url, 28));
+                    current_col += arrow.chars().count();
+                    out.push((arrow, PreviewStyle::Dim));
                 }
+                let link_end = current_col;
+                links.push(PreviewLink {
+                    start_col: link_start,
+                    end_col: link_end,
+                    url,
+                });
                 i = next;
                 continue;
             }
@@ -615,8 +1146,15 @@ fn inline_segments(
         // autolink <http...>
         if chars[i] == '<' {
             if let Some((url, next)) = parse_autolink(&chars, i) {
-                flush(&mut buf, &mut out, PreviewStyle::Normal);
-                out.push((url, PreviewStyle::Link));
+                flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
+                let link_start = current_col;
+                current_col += url.chars().count();
+                out.push((url.clone(), PreviewStyle::Link));
+                links.push(PreviewLink {
+                    start_col: link_start,
+                    end_col: current_col,
+                    url,
+                });
                 i = next;
                 continue;
             }
@@ -625,11 +1163,21 @@ fn inline_segments(
         buf.push(chars[i]);
         i += 1;
     }
-    flush(&mut buf, &mut out, PreviewStyle::Normal);
+    flush(&mut buf, &mut out, PreviewStyle::Normal, &mut current_col);
     if out.is_empty() {
         out.push((String::new(), PreviewStyle::Normal));
     }
-    out
+    (out, links)
+}
+
+/// Inline: code, bold, italic, strike, image, link.
+/// `expand_images`: se true, imagem vira `🖼 alt` compacto (não card).
+pub fn inline_segments(
+    text: &str,
+    base_dir: Option<&Path>,
+    expand_images: bool,
+) -> Vec<(String, PreviewStyle)> {
+    inline_segments_and_links(text, base_dir, expand_images).0
 }
 
 fn parse_image(chars: &[char], start: usize) -> Option<(String, String, usize)> {
@@ -851,5 +1399,86 @@ mod tests {
             .segments
             .iter()
             .any(|(t, s)| *s == PreviewStyle::Image && t.contains('🖼')));
+    }
+
+    #[test]
+    fn box_drawing_table_with_alignments() {
+        let src = "| Col1 | Col2 |\n| :--- | ---: |\n| left | right |\n";
+        let lines = render_preview_lines(src);
+        assert!(lines.iter().any(|l| l
+            .segments
+            .iter()
+            .any(|(t, _)| t.contains('┌') && t.contains('┬') && t.contains('┐'))));
+        assert!(lines.iter().any(|l| l
+            .segments
+            .iter()
+            .any(|(t, _)| t.contains('├') && t.contains('┼') && t.contains('┤'))));
+        assert!(lines.iter().any(|l| l
+            .segments
+            .iter()
+            .any(|(t, _)| t.contains('└') && t.contains('┴') && t.contains('┘'))));
+        assert!(lines.iter().any(|l| l
+            .segments
+            .iter()
+            .any(|(t, s)| t.contains("left") && *s == PreviewStyle::Table)));
+    }
+
+    #[test]
+    fn links_register_logical_columns() {
+        let lines = render_preview_lines("Click [here](https://example.com) for details\n");
+        assert_eq!(lines[0].links.len(), 1);
+        let link = &lines[0].links[0];
+        assert_eq!(link.url, "https://example.com");
+        assert!(link.start_col > 0);
+        assert!(link.end_col > link.start_col);
+        assert_eq!(lines[0].link_at_col(link.start_col), Some(link));
+    }
+
+    #[test]
+    fn fenced_code_highlights_syntax() {
+        let lines = render_preview_lines("```rust\nfn main() {\n    let x = 42;\n}\n```\n");
+        assert!(lines.iter().any(|l| {
+            l.segments
+                .iter()
+                .any(|(_, s)| matches!(s, PreviewStyle::Syntax(_)))
+        }));
+    }
+
+    #[test]
+    fn inspect_png_and_gif_headers() {
+        let temp_dir = tempfile::tempdir().unwrap();
+
+        // 1. PNG Header (width 640, height 480)
+        let png_path = temp_dir.path().join("test.png");
+        let mut png_data = vec![0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n'];
+        png_data.extend_from_slice(&[0, 0, 0, 13]); // chunk len
+        png_data.extend_from_slice(b"IHDR");
+        png_data.extend_from_slice(&640u32.to_be_bytes());
+        png_data.extend_from_slice(&480u32.to_be_bytes());
+        png_data.extend_from_slice(&[8, 6, 0, 0, 0]);
+        std::fs::write(&png_path, &png_data).unwrap();
+
+        let meta_png = inspect_image_file(&png_path).expect("PNG metadata should be parsed");
+        assert_eq!(meta_png.format, "PNG");
+        assert_eq!(meta_png.dimensions, Some((640, 480)));
+
+        // 2. GIF Header (width 128, height 64)
+        let gif_path = temp_dir.path().join("test.gif");
+        let mut gif_data = b"GIF89a".to_vec();
+        gif_data.extend_from_slice(&128u16.to_le_bytes());
+        gif_data.extend_from_slice(&64u16.to_le_bytes());
+        std::fs::write(&gif_path, &gif_data).unwrap();
+
+        let meta_gif = inspect_image_file(&gif_path).expect("GIF metadata should be parsed");
+        assert_eq!(meta_gif.format, "GIF");
+        assert_eq!(meta_gif.dimensions, Some((128, 64)));
+
+        // 3. Render Preview with image card metadata
+        let preview = render_preview_lines_in("![Diagrama](test.png)\n", Some(temp_dir.path()));
+        assert!(preview
+            .iter()
+            .any(|l| l.segments.iter().any(|(t, s)| t.contains("PNG")
+                && t.contains("640x480 px")
+                && *s == PreviewStyle::Dim)));
     }
 }

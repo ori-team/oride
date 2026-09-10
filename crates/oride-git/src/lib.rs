@@ -43,21 +43,29 @@ pub fn status_map(cwd: &Path) -> HashMap<PathBuf, GitFileStatus> {
         return HashMap::new();
     }
 
+    parse_porcelain_z(&output.stdout)
+}
+
+pub fn parse_porcelain_z(stdout: &[u8]) -> HashMap<PathBuf, GitFileStatus> {
     let mut map = HashMap::new();
-    // -z: records separated by NUL; each "XY path" or rename "XY\0old\0new"
-    for rec in output.stdout.split(|b| *b == 0) {
+    // -z: records separated by NUL; each "XY path" or rename "XY new_path\0old_path\0"
+    let mut iter = stdout.split(|b| *b == 0);
+    while let Some(rec) = iter.next() {
         if rec.len() < 3 {
             continue;
         }
         let xy = &rec[..2];
         let path_bytes = &rec[3..]; // skip "XY "
-                                    // renames may have extra; take first path component
         let path_str = String::from_utf8_lossy(path_bytes);
         let path = PathBuf::from(path_str.trim());
+        let status = classify(xy);
+        if xy[0] == b'R' || xy[1] == b'R' || xy[0] == b'C' || xy[1] == b'C' {
+            // Em rename/copy com -z, o próximo elemento no stream é o orig_path
+            let _ = iter.next();
+        }
         if path.as_os_str().is_empty() {
             continue;
         }
-        let status = classify(xy);
         map.entry(path)
             .and_modify(|s| *s = worse(*s, status))
             .or_insert(status);
@@ -196,6 +204,164 @@ fn worse(a: GitFileStatus, b: GitFileStatus) -> GitFileStatus {
     }
 }
 
+/// Erros em operações interativas do git.
+#[derive(Debug, thiserror::Error)]
+pub enum GitError {
+    #[error("git falhou ({code:?}): {message}")]
+    CommandFailed { code: Option<i32>, message: String },
+    #[error("erro de I/O no git: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("mensagem de commit não pode ser vazia")]
+    EmptyCommitMessage,
+}
+
+/// Adiciona arquivo ao stage (`git add -- <path>`).
+pub fn stage_path(cwd: &Path, path: &Path) -> Result<(), GitError> {
+    let rel = path.strip_prefix(cwd).unwrap_or(path);
+    let output = Command::new("git")
+        .args(["add", "--", &rel.to_string_lossy()])
+        .current_dir(cwd)
+        .output()?;
+    if !output.status.success() {
+        return Err(GitError::CommandFailed {
+            code: output.status.code(),
+            message: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        });
+    }
+    Ok(())
+}
+
+/// Remove arquivo do stage (`git restore --staged -- <path>` ou `git rm --cached`).
+pub fn unstage_path(cwd: &Path, path: &Path) -> Result<(), GitError> {
+    let rel = path.strip_prefix(cwd).unwrap_or(path);
+    let output = Command::new("git")
+        .args(["restore", "--staged", "--", &rel.to_string_lossy()])
+        .current_dir(cwd)
+        .output()?;
+    if !output.status.success() {
+        // Se HEAD não puder ser resolvido (repo vazio), faz fallback para git rm --cached
+        let fallback = Command::new("git")
+            .args(["rm", "--cached", "--", &rel.to_string_lossy()])
+            .current_dir(cwd)
+            .output()?;
+        if !fallback.status.success() {
+            return Err(GitError::CommandFailed {
+                code: output.status.code(),
+                message: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+            });
+        }
+    }
+    Ok(())
+}
+
+/// Executa commit com a mensagem fornecida (`git commit -m <msg>`).
+pub fn commit(cwd: &Path, message: &str) -> Result<String, GitError> {
+    let trimmed = message.trim();
+    if trimmed.is_empty() {
+        return Err(GitError::EmptyCommitMessage);
+    }
+    let output = Command::new("git")
+        .args(["commit", "-m", trimmed])
+        .current_dir(cwd)
+        .output()?;
+    if !output.status.success() {
+        return Err(GitError::CommandFailed {
+            code: output.status.code(),
+            message: String::from_utf8_lossy(&output.stderr).trim().to_string(),
+        });
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+/// Calcula commits à frente e atrás em relação à branch de rastreamento upstream (`ahead`, `behind`).
+/// Executa `git rev-list --left-right --count HEAD...@{upstream}`.
+pub fn ahead_behind(cwd: &Path) -> Option<(usize, usize)> {
+    let output = Command::new("git")
+        .args(["rev-list", "--left-right", "--count", "HEAD...@{upstream}"])
+        .current_dir(cwd)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    parse_ahead_behind(text.trim())
+}
+
+#[must_use]
+pub fn parse_ahead_behind(raw: &str) -> Option<(usize, usize)> {
+    let mut parts = raw.split_whitespace();
+    let ahead = parts.next()?.parse::<usize>().ok()?;
+    let behind = parts.next()?.parse::<usize>().ok()?;
+    Some((ahead, behind))
+}
+
+/// Formata a contagem de ahead/behind para exibição compacta (ex.: `↑1 ↓2`, `↑3`, `↓1`).
+#[must_use]
+pub fn format_ahead_behind(ahead: usize, behind: usize) -> Option<String> {
+    match (ahead, behind) {
+        (0, 0) => None,
+        (a, 0) => Some(format!("↑{a}")),
+        (0, b) => Some(format!("↓{b}")),
+        (a, b) => Some(format!("↑{a} ↓{b}")),
+    }
+}
+
+/// Executa pull da branch remota (`git pull`).
+pub fn git_pull(cwd: &Path) -> Result<String, GitError> {
+    let output = Command::new("git")
+        .args(["pull"])
+        .current_dir(cwd)
+        .output()?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let message = if err.is_empty() {
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        } else {
+            err
+        };
+        return Err(GitError::CommandFailed {
+            code: output.status.code(),
+            message,
+        });
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if stdout.is_empty() {
+        Ok("Already up to date.".to_string())
+    } else {
+        Ok(stdout)
+    }
+}
+
+/// Executa push para a branch remota (`git push`).
+pub fn git_push(cwd: &Path) -> Result<String, GitError> {
+    let output = Command::new("git")
+        .args(["push"])
+        .current_dir(cwd)
+        .output()?;
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let message = if err.is_empty() {
+            String::from_utf8_lossy(&output.stdout).trim().to_string()
+        } else {
+            err
+        };
+        return Err(GitError::CommandFailed {
+            code: output.status.code(),
+            message,
+        });
+    }
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    if !stdout.is_empty() {
+        Ok(stdout)
+    } else if !stderr.is_empty() {
+        Ok(stderr)
+    } else {
+        Ok("pushed successfully".to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,5 +371,80 @@ mod tests {
         assert_eq!(classify(b" M"), GitFileStatus::Modified);
         assert_eq!(classify(b"??"), GitFileStatus::Untracked);
         assert_eq!(classify(b"A "), GitFileStatus::Added);
+    }
+
+    #[test]
+    fn parses_renamed_file_without_phantom_entry() {
+        // "R  new_name.rs\0old_name.rs\0 M modified.rs\0"
+        let data = b"R  new_name.rs\0old_name.rs\0 M modified.rs\0";
+        let map = parse_porcelain_z(data);
+        assert_eq!(map.len(), 2);
+        assert_eq!(
+            map.get(&PathBuf::from("new_name.rs")),
+            Some(&GitFileStatus::Renamed)
+        );
+        assert_eq!(
+            map.get(&PathBuf::from("modified.rs")),
+            Some(&GitFileStatus::Modified)
+        );
+        assert_eq!(map.get(&PathBuf::from("old_name.rs")), None);
+    }
+
+    #[test]
+    fn stage_unstage_and_commit_flow() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let path = temp_dir.path();
+        // Inicializa repo git temporário
+        let _ = Command::new("git")
+            .args(["init"])
+            .current_dir(path)
+            .output()
+            .unwrap();
+        let _ = Command::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(path)
+            .output()
+            .unwrap();
+        let _ = Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(path)
+            .output()
+            .unwrap();
+
+        let file = path.join("file.txt");
+        std::fs::write(&file, "hello").unwrap();
+
+        // Stage
+        stage_path(path, &PathBuf::from("file.txt")).unwrap();
+        let entries = scm_entries(path);
+        assert!(entries
+            .iter()
+            .any(|(s, p)| *s == GitFileStatus::Added && p == Path::new("file.txt")));
+
+        // Unstage
+        unstage_path(path, &PathBuf::from("file.txt")).unwrap();
+        let entries = scm_entries(path);
+        assert!(entries
+            .iter()
+            .any(|(s, p)| *s == GitFileStatus::Untracked && p == Path::new("file.txt")));
+
+        // Stage novamente e commit
+        stage_path(path, &PathBuf::from("file.txt")).unwrap();
+        let commit_res = commit(path, "initial commit").unwrap();
+        assert!(commit_res.contains("initial commit") || !commit_res.is_empty());
+        assert!(scm_entries(path).is_empty());
+    }
+
+    #[test]
+    fn parse_and_format_ahead_behind() {
+        assert_eq!(parse_ahead_behind("1\t2"), Some((1, 2)));
+        assert_eq!(parse_ahead_behind("0 0"), Some((0, 0)));
+        assert_eq!(parse_ahead_behind("4 0"), Some((4, 0)));
+        assert_eq!(parse_ahead_behind("invalid"), None);
+
+        assert_eq!(format_ahead_behind(1, 2), Some("↑1 ↓2".into()));
+        assert_eq!(format_ahead_behind(3, 0), Some("↑3".into()));
+        assert_eq!(format_ahead_behind(0, 5), Some("↓5".into()));
+        assert_eq!(format_ahead_behind(0, 0), None);
     }
 }

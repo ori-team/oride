@@ -26,7 +26,7 @@ Histórico de polish. Roadmap atual: [`planning/alpha6-roadmap.md`](planning/alp
 |---------|--------|
 | Spawn `oriscript lsp` | `[lsp]` config |
 | Diagnostics panel | `Ctrl+Shift+M` |
-| Completion | `Ctrl+Space` |
+| Completion | automático local + `Ctrl+Space` para LSP/fallback |
 | Hover | `Ctrl+K` |
 | Go to definition | `F4` |
 | Format document | `Ctrl+Shift+I` (+ `format_on_save`) |

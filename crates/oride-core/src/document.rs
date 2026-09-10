@@ -35,6 +35,20 @@ pub struct TabSummary {
     pub active: bool,
 }
 
+#[derive(Debug, Default)]
+pub struct SaveAllReport {
+    pub saved: usize,
+    pub saved_paths: Vec<PathBuf>,
+    pub skipped_without_path: usize,
+    pub failures: Vec<SaveFailure>,
+}
+
+#[derive(Debug)]
+pub struct SaveFailure {
+    pub path: PathBuf,
+    pub error: DocumentError,
+}
+
 #[derive(Debug, Error)]
 pub enum DocumentError {
     #[error(transparent)]
@@ -60,12 +74,18 @@ pub struct Document {
     dirty: bool,
     /// Coluna preferida ao mover ↑/↓ (estilo editores clássicos).
     preferred_column: Option<usize>,
+    version: u64,
 }
 
 impl Document {
     #[must_use]
     pub fn id(&self) -> DocumentId {
         self.id
+    }
+
+    #[must_use]
+    pub fn version(&self) -> u64 {
+        self.version
     }
 
     #[must_use]
@@ -116,13 +136,31 @@ impl Document {
         v
     }
 
+    /// Limpa todos os cursores secundários.
     pub fn clear_extra_carets(&mut self) {
         self.extra_carets.clear();
     }
 
-    /// Adiciona caret uma linha acima (mesma coluna preferida).
+    /// Colapsa a seleção ativa em um cursor no head.
+    pub fn collapse_selection(&mut self) {
+        self.selection = Selection::caret(self.selection.head);
+    }
+
+    /// Adiciona um cursor em posição absoluta de byte.
+    pub fn add_cursor_at(&mut self, offset: ByteOffset) {
+        let clamped = self.buffer.clamp_to_char_boundary(offset);
+        self.push_extra_caret(clamped);
+    }
+
+    /// Adiciona caret uma linha acima do cursor mais acima.
     pub fn add_cursor_above(&mut self) -> Result<(), DocumentError> {
-        let caret = self.buffer.byte_to_caret(self.selection.head)?;
+        let all_carets = self.all_caret_offsets();
+        let topmost_offset = all_carets
+            .iter()
+            .min_by_key(|b| b.as_usize())
+            .copied()
+            .unwrap_or(self.selection.head);
+        let caret = self.buffer.byte_to_caret(topmost_offset)?;
         if caret.line == 0 {
             return Ok(());
         }
@@ -134,11 +172,17 @@ impl Document {
         Ok(())
     }
 
-    /// Adiciona caret uma linha abaixo.
+    /// Adiciona caret uma linha abaixo do cursor mais abaixo.
     pub fn add_cursor_below(&mut self) -> Result<(), DocumentError> {
-        let caret = self.buffer.byte_to_caret(self.selection.head)?;
-        let last = self.buffer.line_count().saturating_sub(1);
-        if caret.line >= last {
+        let all_carets = self.all_caret_offsets();
+        let bottommost_offset = all_carets
+            .iter()
+            .max_by_key(|b| b.as_usize())
+            .copied()
+            .unwrap_or(self.selection.head);
+        let caret = self.buffer.byte_to_caret(bottommost_offset)?;
+        let last_line = self.buffer.line_count().saturating_sub(1);
+        if caret.line >= last_line {
             return Ok(());
         }
         let col = self.preferred_column.unwrap_or(caret.column);
@@ -158,26 +202,56 @@ impl Document {
         }
     }
 
+    fn set_carets_from_offsets(&mut self, mut offsets: Vec<ByteOffset>) {
+        offsets.sort_by_key(|b| b.as_usize());
+        offsets.dedup();
+        if let Some((first, rest)) = offsets.split_first() {
+            self.selection = Selection::caret(*first);
+            self.extra_carets = rest.to_vec();
+        }
+        self.undo.commit_group();
+    }
+
     fn move_head_to(&mut self, head: ByteOffset, extend: bool) {
         self.selection = self.selection.move_head(head, extend);
         if !extend {
-            // movimento sem extend colapsa multi-cursor (estilo VS Code com setas)
-            // exceto se quiséssemos mover todos — por simplicidade limpa extras
             self.extra_carets.clear();
         }
         self.undo.commit_group();
     }
 
-    /// Move o caret um caractere à esquerda.
+    /// Move o caret um caractere à esquerda (todos os cursores se multi-cursor).
     pub fn move_left(&mut self, extend: bool) -> Result<(), DocumentError> {
+        if !self.extra_carets.is_empty() && !extend {
+            let all = self.all_caret_offsets();
+            let mut new_offsets = Vec::with_capacity(all.len());
+            for off in all {
+                let prev = self.buffer.prev_char_offset(off).unwrap_or(off);
+                new_offsets.push(prev);
+            }
+            self.set_carets_from_offsets(new_offsets);
+            self.preferred_column = None;
+            return Ok(());
+        }
         let head = self.buffer.prev_char_offset(self.selection.head)?;
         self.preferred_column = None;
         self.move_head_to(head, extend);
         Ok(())
     }
 
-    /// Move o caret um caractere à direita.
+    /// Move o caret um caractere à direita (todos os cursores se multi-cursor).
     pub fn move_right(&mut self, extend: bool) -> Result<(), DocumentError> {
+        if !self.extra_carets.is_empty() && !extend {
+            let all = self.all_caret_offsets();
+            let mut new_offsets = Vec::with_capacity(all.len());
+            for off in all {
+                let next = self.buffer.next_char_offset(off).unwrap_or(off);
+                new_offsets.push(next);
+            }
+            self.set_carets_from_offsets(new_offsets);
+            self.preferred_column = None;
+            return Ok(());
+        }
         let head = self.buffer.next_char_offset(self.selection.head)?;
         self.preferred_column = None;
         self.move_head_to(head, extend);
@@ -186,6 +260,25 @@ impl Document {
 
     /// Move o caret uma linha acima, preservando coluna preferida.
     pub fn move_up(&mut self, extend: bool) -> Result<(), DocumentError> {
+        if !self.extra_carets.is_empty() && !extend {
+            let all = self.all_caret_offsets();
+            let mut new_offsets = Vec::with_capacity(all.len());
+            for off in all {
+                if let Ok(caret) = self.buffer.byte_to_caret(off) {
+                    if caret.line > 0 {
+                        let col = self.preferred_column.unwrap_or(caret.column);
+                        let target = Caret::new(caret.line - 1, col);
+                        if let Ok(new_off) = self.buffer.caret_to_byte(target) {
+                            new_offsets.push(new_off);
+                            continue;
+                        }
+                    }
+                }
+                new_offsets.push(off);
+            }
+            self.set_carets_from_offsets(new_offsets);
+            return Ok(());
+        }
         let caret = self.buffer.byte_to_caret(self.selection.head)?;
         if caret.line == 0 {
             return Ok(());
@@ -200,6 +293,26 @@ impl Document {
 
     /// Move o caret uma linha abaixo, preservando coluna preferida.
     pub fn move_down(&mut self, extend: bool) -> Result<(), DocumentError> {
+        if !self.extra_carets.is_empty() && !extend {
+            let all = self.all_caret_offsets();
+            let last_line = self.buffer.line_count().saturating_sub(1);
+            let mut new_offsets = Vec::with_capacity(all.len());
+            for off in all {
+                if let Ok(caret) = self.buffer.byte_to_caret(off) {
+                    if caret.line < last_line {
+                        let col = self.preferred_column.unwrap_or(caret.column);
+                        let target = Caret::new(caret.line + 1, col);
+                        if let Ok(new_off) = self.buffer.caret_to_byte(target) {
+                            new_offsets.push(new_off);
+                            continue;
+                        }
+                    }
+                }
+                new_offsets.push(off);
+            }
+            self.set_carets_from_offsets(new_offsets);
+            return Ok(());
+        }
         let caret = self.buffer.byte_to_caret(self.selection.head)?;
         let last_line = self.buffer.line_count().saturating_sub(1);
         if caret.line >= last_line {
@@ -215,6 +328,22 @@ impl Document {
 
     /// Home da linha atual.
     pub fn move_line_start(&mut self, extend: bool) -> Result<(), DocumentError> {
+        if !self.extra_carets.is_empty() && !extend {
+            let all = self.all_caret_offsets();
+            let mut new_offsets = Vec::with_capacity(all.len());
+            for off in all {
+                if let Ok(caret) = self.buffer.byte_to_caret(off) {
+                    if let Ok(new_off) = self.buffer.caret_to_byte(Caret::new(caret.line, 0)) {
+                        new_offsets.push(new_off);
+                        continue;
+                    }
+                }
+                new_offsets.push(off);
+            }
+            self.set_carets_from_offsets(new_offsets);
+            self.preferred_column = Some(0);
+            return Ok(());
+        }
         let caret = self.buffer.byte_to_caret(self.selection.head)?;
         let head = self.buffer.caret_to_byte(Caret::new(caret.line, 0))?;
         self.preferred_column = Some(0);
@@ -224,6 +353,26 @@ impl Document {
 
     /// End da linha atual.
     pub fn move_line_end(&mut self, extend: bool) -> Result<(), DocumentError> {
+        if !self.extra_carets.is_empty() && !extend {
+            let all = self.all_caret_offsets();
+            let mut new_offsets = Vec::with_capacity(all.len());
+            for off in all {
+                if let Ok(caret) = self.buffer.byte_to_caret(off) {
+                    if let Ok(line_text) = self.buffer.line_text(caret.line) {
+                        let trimmed = line_text.trim_end_matches(['\n', '\r']);
+                        let col = trimmed.chars().count();
+                        if let Ok(new_off) = self.buffer.caret_to_byte(Caret::new(caret.line, col))
+                        {
+                            new_offsets.push(new_off);
+                            continue;
+                        }
+                    }
+                }
+                new_offsets.push(off);
+            }
+            self.set_carets_from_offsets(new_offsets);
+            return Ok(());
+        }
         let caret = self.buffer.byte_to_caret(self.selection.head)?;
         let line = self.buffer.line_text(caret.line)?;
         let col = line.chars().count();
@@ -286,29 +435,37 @@ impl Document {
         });
         let new_head = ByteOffset::new(at.as_usize() + text.len());
         self.selection = Selection::caret(new_head);
-        self.dirty = true;
+        self.mark_modified();
         Ok(())
     }
 
+    fn mark_modified(&mut self) {
+        self.dirty = true;
+        self.version = self.version.wrapping_add(1);
+    }
+
     fn insert_text_multi(&mut self, text: &str) -> Result<(), DocumentError> {
-        let mut carets = self.all_caret_offsets();
-        // do maior offset para o menor para não invalidar
-        carets.sort_by_key(|b| std::cmp::Reverse(b.as_usize()));
-        let mut new_offsets = Vec::with_capacity(carets.len());
-        for at in carets {
+        let carets = self.all_caret_offsets();
+        let step = text.len();
+        let new_offsets: Vec<ByteOffset> = carets
+            .iter()
+            .enumerate()
+            .map(|(i, at)| ByteOffset::new(at.as_usize() + (i + 1) * step))
+            .collect();
+
+        // Insere do maior offset para o menor para manter índices válidos
+        for at in carets.into_iter().rev() {
             self.buffer.insert(at, text)?;
             self.undo.push_applied(Edit::Insert {
                 at,
                 text: text.to_string(),
             });
-            new_offsets.push(ByteOffset::new(at.as_usize() + text.len()));
         }
-        new_offsets.sort_by_key(|b| b.as_usize());
         if let Some((first, rest)) = new_offsets.split_first() {
             self.selection = Selection::caret(*first);
             self.extra_carets = rest.to_vec();
         }
-        self.dirty = true;
+        self.mark_modified();
         Ok(())
     }
 
@@ -332,27 +489,41 @@ impl Document {
         });
         self.selection = Selection::caret(start);
         self.preferred_column = None;
-        self.dirty = true;
+        self.mark_modified();
         Ok(())
     }
 
     fn backspace_multi(&mut self) -> Result<(), DocumentError> {
-        let mut carets = self.all_caret_offsets();
-        carets.sort_by_key(|b| std::cmp::Reverse(b.as_usize()));
-        let mut new_offsets = Vec::new();
+        let carets = self.all_caret_offsets();
+        let mut ops = Vec::with_capacity(carets.len());
         for end in carets {
             if end.as_usize() == 0 {
-                new_offsets.push(end);
-                continue;
+                ops.push((end, end, 0usize));
+            } else {
+                let start = self.buffer.prev_char_offset(end)?;
+                let len = end.as_usize().saturating_sub(start.as_usize());
+                ops.push((start, end, len));
             }
-            let start = self.buffer.prev_char_offset(end)?;
-            let removed = self.buffer.delete_range(start, end)?;
-            self.undo.push_applied(Edit::Delete {
-                at: start,
-                text: removed,
-            });
-            new_offsets.push(start);
         }
+
+        let mut new_offsets = Vec::with_capacity(ops.len());
+        let mut cumulative_deleted = 0usize;
+        for (start, _end, len) in &ops {
+            let final_offset = start.as_usize().saturating_sub(cumulative_deleted);
+            new_offsets.push(ByteOffset::new(final_offset));
+            cumulative_deleted += len;
+        }
+
+        for (start, end, len) in ops.into_iter().rev() {
+            if len > 0 {
+                let removed = self.buffer.delete_range(start, end)?;
+                self.undo.push_applied(Edit::Delete {
+                    at: start,
+                    text: removed,
+                });
+            }
+        }
+
         new_offsets.sort_by_key(|b| b.as_usize());
         new_offsets.dedup();
         if let Some((first, rest)) = new_offsets.split_first() {
@@ -360,7 +531,7 @@ impl Document {
             self.extra_carets = rest.to_vec();
         }
         self.preferred_column = None;
-        self.dirty = true;
+        self.mark_modified();
         Ok(())
     }
 
@@ -383,27 +554,42 @@ impl Document {
             text: removed,
         });
         self.preferred_column = None;
-        self.dirty = true;
+        self.mark_modified();
         Ok(())
     }
 
     fn delete_forward_multi(&mut self) -> Result<(), DocumentError> {
-        let mut carets = self.all_caret_offsets();
-        carets.sort_by_key(|b| std::cmp::Reverse(b.as_usize()));
-        let mut new_offsets = Vec::new();
+        let carets = self.all_caret_offsets();
+        let buf_len = self.buffer.len_bytes();
+        let mut ops = Vec::with_capacity(carets.len());
         for start in carets {
-            if start.as_usize() >= self.buffer.len_bytes() {
-                new_offsets.push(start);
-                continue;
+            if start.as_usize() >= buf_len {
+                ops.push((start, start, 0usize));
+            } else {
+                let end = self.buffer.next_char_offset(start)?;
+                let len = end.as_usize().saturating_sub(start.as_usize());
+                ops.push((start, end, len));
             }
-            let end = self.buffer.next_char_offset(start)?;
-            let removed = self.buffer.delete_range(start, end)?;
-            self.undo.push_applied(Edit::Delete {
-                at: start,
-                text: removed,
-            });
-            new_offsets.push(start);
         }
+
+        let mut new_offsets = Vec::with_capacity(ops.len());
+        let mut cumulative_deleted = 0usize;
+        for (start, _end, len) in &ops {
+            let final_offset = start.as_usize().saturating_sub(cumulative_deleted);
+            new_offsets.push(ByteOffset::new(final_offset));
+            cumulative_deleted += len;
+        }
+
+        for (start, end, len) in ops.into_iter().rev() {
+            if len > 0 {
+                let removed = self.buffer.delete_range(start, end)?;
+                self.undo.push_applied(Edit::Delete {
+                    at: start,
+                    text: removed,
+                });
+            }
+        }
+
         new_offsets.sort_by_key(|b| b.as_usize());
         new_offsets.dedup();
         if let Some((first, rest)) = new_offsets.split_first() {
@@ -411,7 +597,7 @@ impl Document {
             self.extra_carets = rest.to_vec();
         }
         self.preferred_column = None;
-        self.dirty = true;
+        self.mark_modified();
         Ok(())
     }
 
@@ -428,14 +614,14 @@ impl Document {
         });
         self.selection = Selection::caret(start);
         self.extra_carets.clear();
-        self.dirty = true;
+        self.mark_modified();
         Ok(())
     }
 
     pub fn undo(&mut self) -> bool {
         let changed = self.undo.undo(&mut self.buffer);
         if changed {
-            self.dirty = true;
+            self.mark_modified();
             let len = self.buffer.len_bytes();
             let head = self.selection.head.as_usize().min(len);
             self.selection = Selection::caret(ByteOffset::new(head));
@@ -457,7 +643,7 @@ impl Document {
     pub fn redo(&mut self) -> bool {
         let changed = self.redo_inner();
         if changed {
-            self.dirty = true;
+            self.mark_modified();
             let len = self.buffer.len_bytes();
             let head = self.selection.head.as_usize().min(len);
             self.selection = Selection::caret(ByteOffset::new(head));
@@ -500,6 +686,7 @@ impl Document {
         self.dirty = false;
         self.preferred_column = None;
         self.undo = UndoStack::new();
+        self.version = self.version.wrapping_add(1);
         Ok(())
     }
 
@@ -524,8 +711,8 @@ impl Document {
             text: text.to_string(),
         });
         self.selection = Selection::caret(ByteOffset::new(0));
-        self.dirty = true;
         self.preferred_column = None;
+        self.mark_modified();
         Ok(())
     }
 
@@ -562,32 +749,29 @@ impl Document {
             .unwrap_or_default()
     }
 
-    /// Move o caret para `byte` (seleção colapsada).
+    /// Move o caret para `byte` (seleção colapsada), ajustando para boundary UTF-8.
     pub fn jump_to_byte(&mut self, byte: ByteOffset) {
-        let len = self.buffer.len_bytes();
-        let b = ByteOffset::new(byte.as_usize().min(len));
-        self.selection = Selection::caret(b);
+        let snapped = self.buffer.clamp_to_char_boundary(byte);
+        self.selection = Selection::caret(snapped);
         self.extra_carets.clear();
         self.preferred_column = None;
         self.undo.commit_group();
     }
 
-    /// Seleciona o intervalo `[start, end)` em bytes e coloca o head no fim.
+    /// Seleciona o intervalo `[start, end)` em bytes e coloca o head no fim, ajustando para boundaries UTF-8.
     pub fn select_byte_range(&mut self, start: ByteOffset, end: ByteOffset) {
-        let len = self.buffer.len_bytes();
-        let s = ByteOffset::new(start.as_usize().min(len));
-        let e = ByteOffset::new(end.as_usize().min(len));
-        self.selection = Selection::new(s, e);
+        let snapped_start = self.buffer.clamp_to_char_boundary(start);
+        let snapped_end = self.buffer.clamp_to_char_boundary(end);
+        self.selection = Selection::new(snapped_start, snapped_end);
         self.preferred_column = None;
         self.undo.commit_group();
     }
 
-    /// Atualiza seleção sem fechar grupo de undo (drag do mouse).
+    /// Atualiza seleção sem fechar grupo de undo (drag do mouse), ajustando para boundaries UTF-8.
     pub fn set_selection_live(&mut self, anchor: ByteOffset, head: ByteOffset) {
-        let len = self.buffer.len_bytes();
-        let a = ByteOffset::new(anchor.as_usize().min(len));
-        let h = ByteOffset::new(head.as_usize().min(len));
-        self.selection = Selection::new(a, h);
+        let snapped_anchor = self.buffer.clamp_to_char_boundary(anchor);
+        let snapped_head = self.buffer.clamp_to_char_boundary(head);
+        self.selection = Selection::new(snapped_anchor, snapped_head);
         self.extra_carets.clear();
         self.preferred_column = None;
         // não commit_group — drag gera dezenas de updates por segundo
@@ -626,6 +810,7 @@ impl DocumentStore {
             undo: UndoStack::new(),
             dirty: false,
             preferred_column: None,
+            version: 0,
         });
         self.active = Some(id);
         id
@@ -655,6 +840,7 @@ impl DocumentStore {
             undo: UndoStack::new(),
             dirty: false,
             preferred_column: None,
+            version: 0,
         });
         self.active = Some(id);
         Ok(id)
@@ -744,6 +930,28 @@ impl DocumentStore {
         self.docs.iter().map(|d| d.id).collect()
     }
 
+    #[must_use]
+    pub fn dirty_count(&self) -> usize {
+        self.docs.iter().filter(|document| document.dirty).count()
+    }
+
+    /// Localiza uma tab pelo path, normalizando o path do evento quando possível.
+    #[must_use]
+    pub fn document_id_for_path(&self, path: &Path) -> Option<DocumentId> {
+        let canonical = std::fs::canonicalize(path).ok();
+        self.docs
+            .iter()
+            .find(|document| {
+                document.path.as_deref().is_some_and(|document_path| {
+                    document_path == path
+                        || canonical
+                            .as_deref()
+                            .is_some_and(|canonical_path| document_path == canonical_path)
+                })
+            })
+            .map(|document| document.id)
+    }
+
     /// Fecha tab. Retorna se o doc estava dirty (chamador deve confirmar).
     pub fn close(&mut self, id: DocumentId) -> Result<bool, DocumentError> {
         let idx = self
@@ -759,23 +967,27 @@ impl DocumentStore {
         Ok(dirty)
     }
 
-    /// Salva todos os documentos com path. Retorna (salvos, sem_path).
-    pub fn save_all(&mut self) -> (usize, usize) {
-        let mut saved = 0usize;
-        let mut skipped = 0usize;
+    /// Salva todos os documentos com path sem ocultar falhas parciais.
+    pub fn save_all(&mut self) -> SaveAllReport {
+        let mut report = SaveAllReport::default();
         let ids: Vec<_> = self.docs.iter().map(|d| d.id).collect();
         for id in ids {
             if let Some(doc) = self.get_mut(id) {
                 if doc.path().is_none() {
-                    skipped += 1;
+                    report.skipped_without_path += 1;
                     continue;
                 }
-                if doc.save_to(None).is_ok() {
-                    saved += 1;
+                let path = doc.path().map(Path::to_path_buf).unwrap_or_default();
+                match doc.save_to(None) {
+                    Ok(()) => {
+                        report.saved += 1;
+                        report.saved_paths.push(path);
+                    }
+                    Err(error) => report.failures.push(SaveFailure { path, error }),
                 }
             }
         }
-        (saved, skipped)
+        report
     }
 
     /// Paths de abas abertas (ordem das tabs).
@@ -831,6 +1043,39 @@ mod tests {
     }
 
     #[test]
+    fn dirty_count_includes_inactive_tabs() {
+        let mut store = DocumentStore::new();
+        let dirty = store.open_empty();
+        store
+            .get_mut(dirty)
+            .unwrap()
+            .insert_text("changed")
+            .unwrap();
+        store.open_empty();
+
+        assert_eq!(store.dirty_count(), 1);
+        assert!(!store.active().unwrap().is_dirty());
+    }
+
+    #[test]
+    fn save_all_reports_write_failures() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut store = DocumentStore::new();
+        let id = store.open_empty();
+        let document = store.get_mut(id).unwrap();
+        document.set_path(directory.path().to_path_buf());
+        document
+            .insert_text("cannot overwrite a directory")
+            .unwrap();
+
+        let report = store.save_all();
+
+        assert_eq!(report.saved, 0);
+        assert_eq!(report.failures.len(), 1);
+        assert!(store.get(id).unwrap().is_dirty());
+    }
+
+    #[test]
     fn move_up_down_preserves_preferred_column() {
         let mut store = DocumentStore::new();
         let id = store.open_empty();
@@ -858,7 +1103,122 @@ mod multi_cursor_tests {
         doc.jump_to_byte(ByteOffset::new(0));
         doc.add_cursor_below().unwrap();
         assert_eq!(doc.extra_carets().len(), 1);
-        doc.insert_text("X").unwrap();
-        assert_eq!(doc.buffer().as_string(), "Xab\nXcd");
+        doc.insert_text("XY").unwrap();
+        assert_eq!(doc.buffer().as_string(), "XYab\nXYcd");
+        assert_eq!(doc.selection().head, ByteOffset::new(2));
+        assert_eq!(doc.extra_carets(), &[ByteOffset::new(7)]);
+    }
+
+    #[test]
+    fn backspace_at_two_carets() {
+        let mut store = DocumentStore::new();
+        let id = store.open_empty();
+        let doc = store.get_mut(id).unwrap();
+        doc.insert_text("ab\ncd").unwrap();
+        // C1 at end of line 0 ("ab" -> offset 2), C2 at end of line 1 ("cd" -> offset 5)
+        doc.jump_to_byte(ByteOffset::new(2));
+        doc.add_cursor_below().unwrap();
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(2), ByteOffset::new(5)]
+        );
+
+        doc.backspace().unwrap();
+        // Deletes 'b' (offset 1..2) and 'd' (offset 4..5)
+        assert_eq!(doc.buffer().as_string(), "a\nc");
+        assert_eq!(doc.selection().head, ByteOffset::new(1));
+        assert_eq!(doc.extra_carets(), &[ByteOffset::new(3)]);
+    }
+
+    #[test]
+    fn delete_forward_at_two_carets() {
+        let mut store = DocumentStore::new();
+        let id = store.open_empty();
+        let doc = store.get_mut(id).unwrap();
+        doc.insert_text("ab\ncd").unwrap();
+        // C1 at 0 ('a'), C2 at 3 ('c')
+        doc.jump_to_byte(ByteOffset::new(0));
+        doc.add_cursor_below().unwrap();
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(0), ByteOffset::new(3)]
+        );
+
+        doc.delete_forward().unwrap();
+        // Deletes 'a' (offset 0..1) and 'c' (offset 3..4)
+        assert_eq!(doc.buffer().as_string(), "b\nd");
+        assert_eq!(doc.selection().head, ByteOffset::new(0));
+        assert_eq!(doc.extra_carets(), &[ByteOffset::new(2)]);
+    }
+
+    #[test]
+    fn move_all_carets_in_sync() {
+        let mut store = DocumentStore::new();
+        let id = store.open_empty();
+        let doc = store.get_mut(id).unwrap();
+        doc.insert_text("hello\nworld").unwrap();
+        doc.jump_to_byte(ByteOffset::new(0));
+        doc.add_cursor_below().unwrap();
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(0), ByteOffset::new(6)]
+        );
+
+        // Move right: both carets advance 1 char
+        doc.move_right(false).unwrap();
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(1), ByteOffset::new(7)]
+        );
+
+        // Move left: both carets retreat 1 char
+        doc.move_left(false).unwrap();
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(0), ByteOffset::new(6)]
+        );
+
+        // Move line end: both carets move to end of their respective line
+        doc.move_line_end(false).unwrap();
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(5), ByteOffset::new(11)]
+        );
+
+        // Move line start: both carets move to start of line
+        doc.move_line_start(false).unwrap();
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(0), ByteOffset::new(6)]
+        );
+
+        // Clear extra carets
+        doc.clear_extra_carets();
+        assert_eq!(doc.extra_carets().len(), 0);
+        assert_eq!(doc.selection().head, ByteOffset::new(0));
+    }
+
+    #[test]
+    fn multi_cursor_merges_on_collision() {
+        let mut store = DocumentStore::new();
+        let id = store.open_empty();
+        let doc = store.get_mut(id).unwrap();
+        doc.insert_text("ab").unwrap();
+        doc.jump_to_byte(ByteOffset::new(0));
+        doc.add_cursor_at(ByteOffset::new(1));
+        assert_eq!(doc.all_caret_offsets().len(), 2);
+
+        // Move first cursor right by 1, while second is at 1 -> collision at offset 1 or 2
+        doc.move_right(false).unwrap();
+        // C1 was 0 -> 1, C2 was 1 -> 2. Still 2 carets:
+        assert_eq!(
+            doc.all_caret_offsets(),
+            vec![ByteOffset::new(1), ByteOffset::new(2)]
+        );
+
+        // Moving right again: C1 -> 2, C2 was at 2 -> 2. They collide at 2!
+        doc.move_right(false).unwrap();
+        assert_eq!(doc.all_caret_offsets(), vec![ByteOffset::new(2)]);
+        assert_eq!(doc.extra_carets().len(), 0);
     }
 }

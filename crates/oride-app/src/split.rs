@@ -22,6 +22,7 @@ pub struct SplitState {
     pub panes: Vec<EditorPane>,
     pub focused: usize,
     pub orientation: SplitOrientation,
+    pub ratio_percent: u16,
 }
 
 impl SplitState {
@@ -34,7 +35,16 @@ impl SplitState {
             }],
             focused: 0,
             orientation: SplitOrientation::Vertical,
+            ratio_percent: 50,
         }
+    }
+
+    pub fn grow(&mut self, percent: u16) {
+        self.ratio_percent = (self.ratio_percent + percent).min(85);
+    }
+
+    pub fn shrink(&mut self, percent: u16) {
+        self.ratio_percent = self.ratio_percent.saturating_sub(percent).max(15);
     }
 
     #[must_use]

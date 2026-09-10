@@ -81,18 +81,10 @@ pub fn render_menu_bar(
 }
 
 /// Dropdown sob o menu `open_idx`.
-pub fn render_menu_dropdown(
-    frame: &mut Frame,
-    full: Rect,
-    menus: &[MenuColumn],
-    open_idx: usize,
-    selected: usize,
-) {
-    let Some(menu) = menus.get(open_idx) else {
-        return;
-    };
-    // posição x aproximada pelo índice
-    let mut x = full.x + 1;
+#[must_use]
+pub fn menu_dropdown_rect(full: Rect, menus: &[MenuColumn], open_idx: usize) -> Option<Rect> {
+    let menu = menus.get(open_idx)?;
+    let mut x = full.x;
     for (i, m) in menus.iter().enumerate() {
         if i == open_idx {
             break;
@@ -108,12 +100,27 @@ pub fn render_menu_dropdown(
         .min(full.width.saturating_sub(2) as usize) as u16;
     let height = (menu.items.len() as u16 + 2).min(full.height.saturating_sub(1));
     let y = full.y.saturating_add(1);
-    let rect = Rect::new(
+    Some(Rect::new(
         x.min(full.x + full.width.saturating_sub(width)),
         y,
         width,
         height,
-    );
+    ))
+}
+
+pub fn render_menu_dropdown(
+    frame: &mut Frame,
+    full: Rect,
+    menus: &[MenuColumn],
+    open_idx: usize,
+    selected: usize,
+) {
+    let Some(menu) = menus.get(open_idx) else {
+        return;
+    };
+    let Some(rect) = menu_dropdown_rect(full, menus, open_idx) else {
+        return;
+    };
     frame.render_widget(Clear, rect);
     let block = Block::default()
         .borders(Borders::ALL)

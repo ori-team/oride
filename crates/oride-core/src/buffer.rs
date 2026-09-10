@@ -162,6 +162,17 @@ impl Buffer {
         Ok(removed)
     }
 
+    /// Ajusta `offset` para a fronteira de caractere UTF-8 válida mais próxima.
+    #[must_use]
+    pub fn clamp_to_char_boundary(&self, offset: ByteOffset) -> ByteOffset {
+        let maximum_length = self.len_bytes();
+        let mut target_offset = offset.as_usize().min(maximum_length);
+        while target_offset > 0 && self.rope.try_byte_to_char(target_offset).is_err() {
+            target_offset -= 1;
+        }
+        ByteOffset::new(target_offset)
+    }
+
     fn ensure_offset_boundary(&self, offset: ByteOffset) -> Result<(), BufferError> {
         let o = offset.as_usize();
         let len = self.len_bytes();

@@ -1,17 +1,21 @@
 //! Hit-test e helpers de mouse (sem event loop).
 
-use oride_core::{Buffer, ByteOffset, Caret};
+use oride_core::{Buffer, ByteOffset, Caret, TabSummary};
 use ratatui::layout::Rect;
 
 /// Retângulos do último frame (coordenadas de tela).
 #[derive(Debug, Clone, Default)]
 pub struct HitRegions {
     pub menu: Rect,
+    pub menu_dropdown: Option<Rect>,
     pub tree: Option<Rect>,
     pub tabs: Option<Rect>,
     pub editor: Option<Rect>,
     pub scm: Option<Rect>,
     pub terminal: Option<Rect>,
+    pub preview: Option<Rect>,
+    pub tree_splitter: Option<Rect>,
+    pub editor_splitter: Option<Rect>,
     pub gutter: u16,
     pub text_width: u16,
     pub soft_wrap: bool,
@@ -26,6 +30,9 @@ pub enum HitTarget {
     Editor,
     Scm,
     Terminal,
+    Preview,
+    TreeSplitter,
+    EditorSplitter,
     Outside,
 }
 
@@ -34,6 +41,16 @@ impl HitRegions {
     pub fn at(&self, x: u16, y: u16) -> HitTarget {
         if contains(self.menu, x, y) {
             return HitTarget::Menu;
+        }
+        if let Some(r) = self.tree_splitter {
+            if contains(r, x, y) {
+                return HitTarget::TreeSplitter;
+            }
+        }
+        if let Some(r) = self.editor_splitter {
+            if contains(r, x, y) {
+                return HitTarget::EditorSplitter;
+            }
         }
         if let Some(r) = self.tree {
             if contains(r, x, y) {
@@ -58,6 +75,11 @@ impl HitRegions {
         if let Some(r) = self.terminal {
             if contains(r, x, y) {
                 return HitTarget::Terminal;
+            }
+        }
+        if let Some(r) = self.preview {
+            if contains(r, x, y) {
+                return HitTarget::Preview;
             }
         }
         HitTarget::Outside
@@ -148,7 +170,7 @@ pub fn menu_index_at(titles: &[&str], menu_area: Rect, x: u16) -> Option<usize> 
     if x < menu_area.x || x >= menu_area.x.saturating_add(menu_area.width) {
         return None;
     }
-    let mut cx = menu_area.x + 1;
+    let mut cx = menu_area.x;
     for (i, t) in titles.iter().enumerate() {
         let w = (t.chars().count() as u16) + 2;
         if x >= cx && x < cx + w {
@@ -168,6 +190,30 @@ pub fn tab_index_at(tabs_area: Rect, tab_count: usize, x: u16) -> Option<usize> 
     let w = (tabs_area.width as usize / tab_count).max(1);
     let local = x.saturating_sub(tabs_area.x) as usize;
     Some((local / w).min(tab_count - 1))
+}
+
+/// Índice exato de tab a partir da largura de cada chip desenhado na tela.
+#[must_use]
+pub fn accurate_tab_index_at(tabs_area: Rect, tabs: &[TabSummary], x: u16) -> Option<usize> {
+    if tabs.is_empty() || x < tabs_area.x || x >= tabs_area.x.saturating_add(tabs_area.width) {
+        return None;
+    }
+    let mut current_x = tabs_area.x;
+    for (i, tab) in tabs.iter().enumerate() {
+        if i > 0 {
+            current_x = current_x.saturating_add(1);
+        }
+        let dirty_len = if tab.dirty { 1 } else { 0 };
+        let num_len = (i + 1).to_string().len();
+        let title_len = tab.title.chars().count();
+        let chip_width = (4 + num_len + title_len + dirty_len) as u16;
+        let next_x = current_x.saturating_add(chip_width);
+        if x >= current_x && x < next_x {
+            return Some(i);
+        }
+        current_x = next_x;
+    }
+    None
 }
 
 fn is_word_char(c: char) -> bool {

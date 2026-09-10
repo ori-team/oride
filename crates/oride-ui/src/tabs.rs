@@ -73,20 +73,21 @@ fn paint_tabs(buf: &mut Buffer, area: Rect, tabs: &[TabSummary]) {
     }
 }
 
-/// Escreve `text` a partir de `x` até `end_x` com estilo; retorna o próximo x.
-fn write_styled(buf: &mut Buffer, mut x: u16, y: u16, end_x: u16, text: &str, style: Style) -> u16 {
-    for ch in text.chars() {
-        if x >= end_x {
-            break;
-        }
-        if let Some(cell) = buf.cell_mut((x, y)) {
-            cell.set_symbol(&ch.to_string());
-            cell.set_style(style);
-        }
-        // wide chars: avança 1 coluna (simplificado; suficiente p/ ASCII+BMP)
-        x = x.saturating_add(1);
+/// Escreve `text` a partir de `current_x` até `end_x` com estilo; retorna o próximo x.
+fn write_styled(
+    buffer: &mut Buffer,
+    current_x: u16,
+    row_y: u16,
+    end_x: u16,
+    text: &str,
+    style: Style,
+) -> u16 {
+    if current_x >= end_x {
+        return current_x;
     }
-    x
+    let available_width = end_x.saturating_sub(current_x) as usize;
+    let (next_x, _) = buffer.set_stringn(current_x, row_y, text, available_width, style);
+    next_x
 }
 
 #[cfg(test)]

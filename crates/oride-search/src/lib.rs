@@ -1,5 +1,6 @@
 //! Busca em projeto: tenta `rg`, senão walk Rust com `ignore`.
 
+mod replace;
 mod ripgrep;
 mod walk;
 
@@ -7,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
+pub use replace::{replace_in_file, replace_in_project, ReplaceSummary};
 pub use ripgrep::rg_available;
 
 /// Opções de busca no workspace.
@@ -15,6 +17,8 @@ pub struct SearchQuery {
     pub pattern: String,
     pub case_sensitive: bool,
     pub use_regex: bool,
+    /// Filtro de glob de arquivos opcional (ex: `*.rs`, `!*.test.js`).
+    pub file_glob: Option<String>,
     /// Máximo de hits (protege UI).
     pub max_hits: usize,
 }
@@ -25,6 +29,7 @@ impl Default for SearchQuery {
             pattern: String::new(),
             case_sensitive: false,
             use_regex: false,
+            file_glob: None,
             max_hits: 500,
         }
     }
@@ -149,6 +154,7 @@ mod tests {
             case_sensitive: false,
             use_regex: false,
             max_hits: 100,
+            ..Default::default()
         };
         // Força fallback Rust para determinismo (mesmo com rg instalado)
         let hits = walk::search_walk(dir.path(), &q, 100).unwrap();
@@ -167,6 +173,7 @@ mod tests {
             case_sensitive: false,
             use_regex: true,
             max_hits: 50,
+            ..Default::default()
         };
         let hits = walk::search_walk(dir.path(), &q, 50).unwrap();
         assert!(!hits.is_empty());
@@ -185,5 +192,27 @@ mod tests {
             r.backend,
             SearchBackend::Ripgrep | SearchBackend::RustWalk
         ));
+    }
+
+    #[test]
+    fn glob_filter_restricts_search_results() {
+        let dir = fixture();
+        let query_md = SearchQuery {
+            pattern: "findme".into(),
+            file_glob: Some("*.md".into()),
+            ..Default::default()
+        };
+        let hits_md = walk::search_walk(dir.path(), &query_md, 100).unwrap();
+        assert_eq!(hits_md.len(), 1);
+        assert!(hits_md[0].path.to_string_lossy().ends_with("readme.md"));
+
+        let query_oris = SearchQuery {
+            pattern: "findme".into(),
+            file_glob: Some("*.oris".into()),
+            ..Default::default()
+        };
+        let hits_oris = walk::search_walk(dir.path(), &query_oris, 100).unwrap();
+        assert_eq!(hits_oris.len(), 1);
+        assert!(hits_oris[0].path.to_string_lossy().ends_with("a.oris"));
     }
 }

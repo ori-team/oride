@@ -14,9 +14,49 @@ pub enum LanguageId {
     Html,
     Css,
     JavaScript,
+    TypeScript,
+    Tsx,
+    Rust,
+    C,
+    Bash,
+    Python,
+    Ruby,
+    Nim,
+    Ori,
+    D,
+    Lua,
+    Custom(&'static str),
 }
 
 impl LanguageId {
+    #[must_use]
+    pub fn from_str_or_custom(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "plain" => Self::Plain,
+            "oriscript" | "oris" => Self::OriScript,
+            "markdown" | "md" => Self::Markdown,
+            "mdx" => Self::Mdx,
+            "html" | "htm" => Self::Html,
+            "css" => Self::Css,
+            "javascript" | "js" | "mjs" | "cjs" => Self::JavaScript,
+            "typescript" | "ts" => Self::TypeScript,
+            "typescriptreact" | "tsx" => Self::Tsx,
+            "rust" | "rs" => Self::Rust,
+            "c" | "h" => Self::C,
+            "bash" | "sh" | "shell" | "zsh" => Self::Bash,
+            "python" | "py" => Self::Python,
+            "ruby" | "rb" => Self::Ruby,
+            "nim" => Self::Nim,
+            "ori" | "orl" => Self::Ori,
+            "d" => Self::D,
+            "lua" => Self::Lua,
+            other => {
+                let leaked: &'static str = Box::leak(other.to_string().into_boxed_str());
+                Self::Custom(leaked)
+            }
+        }
+    }
+
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -27,6 +67,18 @@ impl LanguageId {
             Self::Html => "html",
             Self::Css => "css",
             Self::JavaScript => "javascript",
+            Self::TypeScript => "typescript",
+            Self::Tsx => "typescriptreact",
+            Self::Rust => "rust",
+            Self::C => "c",
+            Self::Bash => "bash",
+            Self::Python => "python",
+            Self::Ruby => "ruby",
+            Self::Nim => "nim",
+            Self::Ori => "ori",
+            Self::D => "d",
+            Self::Lua => "lua",
+            Self::Custom(s) => s,
         }
     }
 
@@ -47,16 +99,27 @@ impl LanguageId {
     pub fn line_comment(self) -> Option<&'static str> {
         match self {
             Self::Markdown | Self::Mdx | Self::Html => Some("<!-- "),
-            Self::OriScript | Self::JavaScript | Self::Css => Some("// "),
-            Self::Plain => None,
+            Self::OriScript
+            | Self::JavaScript
+            | Self::TypeScript
+            | Self::Tsx
+            | Self::Rust
+            | Self::C
+            | Self::D => Some("// "),
+            Self::Ori | Self::Lua => Some("-- "),
+            Self::Python | Self::Ruby | Self::Nim | Self::Bash => Some("# "),
+            Self::Css => Some("/* "),
+            Self::Plain | Self::Custom(_) => None,
         }
     }
 
-    /// Sufixo de comentário HTML (MD).
+    /// Sufixo de comentário de bloco (ou HTML/Lua).
     #[must_use]
     pub fn block_comment_close(self) -> Option<&'static str> {
         match self {
             Self::Markdown | Self::Mdx | Self::Html => Some(" -->"),
+            Self::Css | Self::D | Self::C => Some(" */"),
+            Self::Lua => Some("]]"),
             _ => None,
         }
     }
@@ -86,6 +149,18 @@ pub fn detect_language(path: Option<&Path>) -> LanguageId {
     ) {
         return LanguageId::Markdown;
     }
+    if matches!(
+        name.as_str(),
+        ".bashrc"
+            | ".bash_profile"
+            | ".bash_login"
+            | ".bash_logout"
+            | ".profile"
+            | ".zshrc"
+            | ".zprofile"
+    ) {
+        return LanguageId::Bash;
+    }
     if name.ends_with(".md") || name.contains("readme") {
         // readme.pt-br etc.
         if name.contains('.') {
@@ -102,7 +177,17 @@ pub fn detect_language(path: Option<&Path>) -> LanguageId {
         "html" | "htm" => LanguageId::Html,
         "css" => LanguageId::Css,
         "js" | "mjs" | "cjs" | "jsx" => LanguageId::JavaScript,
-        "ts" | "tsx" => LanguageId::JavaScript,
+        "ts" => LanguageId::TypeScript,
+        "tsx" => LanguageId::Tsx,
+        "rs" => LanguageId::Rust,
+        "c" | "h" => LanguageId::C,
+        "sh" | "bash" | "zsh" => LanguageId::Bash,
+        "py" | "pyw" => LanguageId::Python,
+        "rb" | "rake" | "gemspec" => LanguageId::Ruby,
+        "nim" | "nims" | "nimble" => LanguageId::Nim,
+        "orl" => LanguageId::Ori,
+        "d" | "di" => LanguageId::D,
+        "lua" => LanguageId::Lua,
         _ => {
             // README.md already handled; bare README
             if name.starts_with("readme") {
@@ -139,5 +224,29 @@ mod tests {
         );
         assert!(LanguageId::Markdown.default_soft_wrap());
         assert!(LanguageId::Mdx.is_markdown_family());
+    }
+
+    #[test]
+    fn detects_l1_languages() {
+        let cases = [
+            ("main.rs", LanguageId::Rust),
+            ("main.c", LanguageId::C),
+            ("header.h", LanguageId::C),
+            ("deploy.sh", LanguageId::Bash),
+            ("script.bash", LanguageId::Bash),
+            (".bashrc", LanguageId::Bash),
+            ("main.py", LanguageId::Python),
+            ("app.ts", LanguageId::TypeScript),
+            ("view.tsx", LanguageId::Tsx),
+            ("task.rb", LanguageId::Ruby),
+            ("main.nim", LanguageId::Nim),
+            ("main.orl", LanguageId::Ori),
+            ("main.d", LanguageId::D),
+            ("module.di", LanguageId::D),
+            ("script.lua", LanguageId::Lua),
+        ];
+        for (path, expected) in cases {
+            assert_eq!(detect_language(Some(Path::new(path))), expected, "{path}");
+        }
     }
 }

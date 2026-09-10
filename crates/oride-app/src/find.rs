@@ -189,16 +189,16 @@ pub fn is_whole_word(haystack: &str, start: usize, end: usize) -> bool {
     left_ok && right_ok
 }
 
-fn fold_char(c: char, case_sensitive: bool, ignore_accents: bool) -> char {
-    let c = if case_sensitive {
-        c
+fn fold_char(character: char, case_sensitive: bool, ignore_accents: bool) -> char {
+    let normalized = if case_sensitive {
+        character
     } else {
-        c.to_lowercase().next().unwrap_or(c)
+        character.to_lowercase().next().unwrap_or(character)
     };
     if !ignore_accents {
-        return c;
+        return normalized;
     }
-    match c {
+    match normalized {
         'á' | 'à' | 'â' | 'ã' | 'ä' | 'å' => 'a',
         'é' | 'è' | 'ê' | 'ë' => 'e',
         'í' | 'ì' | 'î' | 'ï' => 'i',
@@ -207,6 +207,14 @@ fn fold_char(c: char, case_sensitive: bool, ignore_accents: bool) -> char {
         'ç' => 'c',
         'ñ' => 'n',
         'ý' | 'ÿ' => 'y',
+        'Á' | 'À' | 'Â' | 'Ã' | 'Ä' | 'Å' => 'A',
+        'É' | 'È' | 'Ê' | 'Ë' => 'E',
+        'Í' | 'Ì' | 'Î' | 'Ï' => 'I',
+        'Ó' | 'Ò' | 'Ô' | 'Õ' | 'Ö' => 'O',
+        'Ú' | 'Ù' | 'Û' | 'Ü' => 'U',
+        'Ç' => 'C',
+        'Ñ' => 'N',
+        'Ý' => 'Y',
         other => other,
     }
 }
@@ -375,5 +383,13 @@ mod tests {
         assert!(is_whole_word(t, 6, 8));
         // "b c" não é palavra isolada no sentido de "bc" — teste borda em "cd"
         assert!(is_whole_word(t, 3, 5));
+    }
+
+    #[test]
+    fn fold_char_matches_uppercase_accents_when_case_sensitive() {
+        // Busca case-sensitive com ignorar acentos: "Árvore" deve casar "Arvore"
+        let matches = find_all("Árvore arvore", "Arvore", true, true);
+        assert_eq!(matches.len(), 1);
+        assert_eq!(matches[0].start, 0);
     }
 }

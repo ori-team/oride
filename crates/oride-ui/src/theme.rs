@@ -131,6 +131,12 @@ impl UiTheme {
         Self::from_config_parts(cfg, &SyntaxColorsConfig::default())
     }
 
+    pub fn from_theme_definition(
+        theme: &oride_config::ThemeDefinition,
+    ) -> Result<Self, ThemeBuildError> {
+        Self::from_config_parts(&theme.ui, &theme.syntax)
+    }
+
     pub fn from_config_parts(
         ui: &ThemeUiConfig,
         syntax: &SyntaxColorsConfig,

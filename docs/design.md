@@ -283,7 +283,7 @@ Projeto local: `.oride/config.toml` sobrescreve user (merge profundo de seções
 
 | Capacidade | Fonte |
 |------------|--------|
-| Diagnostics / hover / goto / completion / format | `oriscript lsp` (stdio) |
+| Diagnostics / hover / goto / completion / format | clients stdio preguiçosos por linguagem; defaults `oriscript lsp` e `ori-lsp` |
 | Detectar projeto | `oris.proj` na raiz aberta ou ancestral |
 | Grammar highlight | copiar/adaptar `tree-sitter-oriscript` do monorepo (submodule ou crate path opcional) |
 | Run | Action `run_project` → `oriscript run` no terminal embutido ou job buffer |
@@ -346,7 +346,7 @@ Cada PR = um conceito; ordem topologicamente segura.
 Ver plano canônico: **[`docs/planning/post-0.1-roadmap.md`](planning/post-0.1-roadmap.md)**.
 
 **Roadmap atual (normativo):** [`docs/planning/alpha6-roadmap.md`](planning/alpha6-roadmap.md)  
-(`0.1.0-alpha.6`+). P5–P9 do post-0.1 já entregues; próximos: languages L1, MD links/images no terminal, hygiene anti-bloat (sem macros, sem preview HTML).
+(`0.2.0`). P5–P9, languages L1 (Rust, Python, TS, D, Lua, etc.), MD links/imagens, multi-LSP sob demanda L2, SCM sync (pull/push/ahead-behind) e hygiene anti-bloat já entregues e validados.
 
 ---
 

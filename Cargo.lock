@@ -619,6 +619,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link",
+]
+
+[[package]]
 name = "libredox"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -848,7 +858,7 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "oride"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "oride-app",
@@ -857,7 +867,7 @@ dependencies = [
 
 [[package]]
 name = "oride-app"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "arboard",
@@ -869,6 +879,7 @@ dependencies = [
  "oride-core",
  "oride-fs",
  "oride-git",
+ "oride-i18n",
  "oride-keymap",
  "oride-lsp",
  "oride-plugin",
@@ -885,7 +896,7 @@ dependencies = [
 
 [[package]]
 name = "oride-config"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "dirs",
  "serde",
@@ -896,15 +907,16 @@ dependencies = [
 
 [[package]]
 name = "oride-core"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "ropey",
+ "tempfile",
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "oride-fs"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "tempfile",
  "thiserror 2.0.18",
@@ -912,14 +924,25 @@ dependencies = [
 
 [[package]]
 name = "oride-git"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
+ "tempfile",
  "thiserror 2.0.18",
 ]
 
 [[package]]
+name = "oride-i18n"
+version = "0.2.0"
+dependencies = [
+ "dirs",
+ "serde",
+ "tempfile",
+ "toml",
+]
+
+[[package]]
 name = "oride-keymap"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "crossterm",
  "thiserror 2.0.18",
@@ -927,7 +950,7 @@ dependencies = [
 
 [[package]]
 name = "oride-lsp"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "serde",
@@ -938,15 +961,17 @@ dependencies = [
 
 [[package]]
 name = "oride-plugin"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "oride-syntax",
+ "serde",
  "thiserror 2.0.18",
+ "toml",
 ]
 
 [[package]]
 name = "oride-search"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "ignore",
  "regex",
@@ -957,21 +982,24 @@ dependencies = [
 
 [[package]]
 name = "oride-syntax"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
+ "dirs",
+ "libloading",
  "tempfile",
  "thiserror 2.0.18",
  "tree-sitter",
- "tree-sitter-css",
- "tree-sitter-html",
- "tree-sitter-javascript",
+ "tree-sitter-bash",
+ "tree-sitter-c",
+ "tree-sitter-language",
  "tree-sitter-md",
  "tree-sitter-oriscript",
+ "tree-sitter-rust",
 ]
 
 [[package]]
 name = "oride-terminal"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "portable-pty",
  "strip-ansi-escapes",
@@ -980,7 +1008,7 @@ dependencies = [
 
 [[package]]
 name = "oride-ui"
-version = "0.1.0-alpha.6"
+version = "0.2.0"
 dependencies = [
  "oride-config",
  "oride-core",
@@ -1593,30 +1621,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree-sitter-css"
-version = "0.25.0"
+name = "tree-sitter-bash"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5cbc5e18f29a2c6d6435891f42569525cf95435a3e01c2f1947abcde178686f"
+checksum = "9e5ec769279cc91b561d3df0d8a5deb26b0ad40d183127f409494d6d8fc53062"
 dependencies = [
  "cc",
  "tree-sitter-language",
 ]
 
 [[package]]
-name = "tree-sitter-html"
-version = "0.23.2"
+name = "tree-sitter-c"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "261b708e5d92061ede329babaaa427b819329a9d427a1d710abb0f67bbef63ee"
-dependencies = [
- "cc",
- "tree-sitter-language",
-]
-
-[[package]]
-name = "tree-sitter-javascript"
-version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68204f2abc0627a90bdf06e605f5c470aa26fdcb2081ea553a04bdad756693f5"
+checksum = "a9b2eb57a55fed6b00812912e730b7a275cf4fe98bfd6a5d76263d4438371728"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1644,6 +1662,16 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "tree-sitter",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-rust"
+version = "0.24.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "439e577dbe07423ec2582ac62c7531120dbfccfa6e5f92406f93dd271a120e45"
+dependencies = [
+ "cc",
  "tree-sitter-language",
 ]
 

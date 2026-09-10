@@ -116,5 +116,6 @@ fn map_style(style: PreviewStyle, theme: &UiTheme) -> Style {
             .fg(Color::DarkGray)
             .add_modifier(Modifier::CROSSED_OUT | Modifier::DIM),
         PreviewStyle::Dim => Style::default().fg(Color::DarkGray),
+        PreviewStyle::Syntax(kind) => theme.syntax_style(kind),
     }
 }

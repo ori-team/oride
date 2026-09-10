@@ -170,11 +170,21 @@ fn heuristic_fence_content(node: tree_sitter::Node, source: &str) -> Option<(usi
 pub fn fence_lang_alias(name: &str) -> Option<LanguageId> {
     let n = name.trim().to_ascii_lowercase();
     match n.as_str() {
-        "oris" | "oriscript" | "ori" => Some(LanguageId::OriScript),
+        "oris" | "oriscript" => Some(LanguageId::OriScript),
+        "ori" | "orl" | "ori-lang" => Some(LanguageId::Ori),
         "js" | "javascript" | "jsx" | "mjs" | "cjs" => Some(LanguageId::JavaScript),
+        "ts" | "typescript" => Some(LanguageId::TypeScript),
+        "tsx" => Some(LanguageId::Tsx),
+        "rust" | "rs" => Some(LanguageId::Rust),
+        "c" | "h" => Some(LanguageId::C),
+        "bash" | "sh" | "shell" | "zsh" => Some(LanguageId::Bash),
+        "python" | "py" => Some(LanguageId::Python),
+        "ruby" | "rb" => Some(LanguageId::Ruby),
+        "nim" => Some(LanguageId::Nim),
+        "d" | "dlang" => Some(LanguageId::D),
+        "lua" => Some(LanguageId::Lua),
         "html" | "htm" => Some(LanguageId::Html),
         "css" | "scss" => Some(LanguageId::Css),
-        // rust e outros sem grammar no binário: None (fica só paint de code block)
         _ => None,
     }
 }
@@ -456,9 +466,58 @@ fn main() {}
     }
 
     #[test]
-    fn fence_alias_oris() {
-        assert_eq!(fence_lang_alias("oriscript"), Some(LanguageId::OriScript));
-        assert_eq!(fence_lang_alias("js"), Some(LanguageId::JavaScript));
-        assert_eq!(fence_lang_alias("python"), None);
+    fn fence_aliases_cover_l1_languages() {
+        let aliases = [
+            ("oriscript", LanguageId::OriScript),
+            ("js", LanguageId::JavaScript),
+            ("typescript", LanguageId::TypeScript),
+            ("tsx", LanguageId::Tsx),
+            ("rust", LanguageId::Rust),
+            ("c", LanguageId::C),
+            ("bash", LanguageId::Bash),
+            ("sh", LanguageId::Bash),
+            ("python", LanguageId::Python),
+            ("ruby", LanguageId::Ruby),
+            ("nim", LanguageId::Nim),
+            ("ori", LanguageId::Ori),
+            ("d", LanguageId::D),
+            ("dlang", LanguageId::D),
+            ("lua", LanguageId::Lua),
+        ];
+        for (alias, expected) in aliases {
+            assert_eq!(fence_lang_alias(alias), Some(expected), "{alias}");
+        }
+    }
+
+    #[test]
+    fn injects_highlight_for_every_l1_fence() {
+        let fixtures = [
+            ("rust", "fn main() {}"),
+            ("c", "int main(void) { return 0; }"),
+            ("bash", "echo \"hello world\""),
+            ("python", "def main(): return 1"),
+            ("typescript", "const value: number = 1;"),
+            ("tsx", "const App = () => <main />;"),
+            ("ruby", "def main; 1; end"),
+            ("nim", "proc main() = echo 1"),
+            ("ori", "module demo\nconst value: int = 1"),
+            ("d", "void main() {}"),
+            ("lua", "local value = 1"),
+        ];
+
+        for (alias, code) in fixtures {
+            let source = format!("```{alias}\n{code}\n```\n");
+            let code_start = source.find(code).expect("fixture code");
+            let code_end = code_start + code.len();
+            let spans = collect_markdown_spans(&source);
+            assert!(
+                spans.iter().any(|span| {
+                    span.start >= code_start
+                        && span.end <= code_end
+                        && !matches!(span.kind, HighlightKind::Normal | HighlightKind::Code)
+                }),
+                "expected injected spans for {alias}: {spans:?}"
+            );
+        }
     }
 }

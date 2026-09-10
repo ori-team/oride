@@ -3,6 +3,7 @@
 use std::fs;
 use std::path::Path;
 
+use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
 use regex::RegexBuilder;
 
@@ -18,7 +19,8 @@ pub fn search_walk(
     let re = build_matcher(&query.pattern, query.case_sensitive, query.use_regex)?;
     let mut hits = Vec::new();
 
-    let walker = WalkBuilder::new(root)
+    let mut builder = WalkBuilder::new(root);
+    builder
         .hidden(true)
         .git_ignore(true)
         .git_global(true)
@@ -29,8 +31,21 @@ pub fn search_walk(
                 return !SKIP_DIR_NAMES.iter().any(|s| *s == name);
             }
             true
-        })
-        .build();
+        });
+
+    if let Some(ref glob) = query.file_glob {
+        let trimmed = glob.trim();
+        if !trimmed.is_empty() {
+            let mut override_builder = OverrideBuilder::new(root);
+            if override_builder.add(trimmed).is_ok() {
+                if let Ok(overrides) = override_builder.build() {
+                    builder.overrides(overrides);
+                }
+            }
+        }
+    }
+
+    let walker = builder.build();
 
     for entry in walker.flatten() {
         if hits.len() >= max_hits {
@@ -52,7 +67,7 @@ pub fn search_walk(
     Ok(hits)
 }
 
-fn build_matcher(
+pub(crate) fn build_matcher(
     pattern: &str,
     case_sensitive: bool,
     use_regex: bool,
@@ -93,7 +108,7 @@ fn search_file(
     }
 }
 
-fn is_textish(path: &Path) -> bool {
+pub(crate) fn is_textish(path: &Path) -> bool {
     let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
         let name = path
             .file_name()
@@ -118,6 +133,9 @@ fn is_textish(path: &Path) -> bool {
         e.as_str(),
         "oris"
             | "rs"
+            | "d"
+            | "di"
+            | "lua"
             | "md"
             | "mdx"
             | "txt"

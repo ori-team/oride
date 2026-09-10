@@ -19,14 +19,16 @@ pub trait LanguageProvider: Send + Sync {
     fn comment_open(&self) -> Option<&'static str>;
     fn comment_close(&self) -> Option<&'static str>;
     fn lsp_command(&self) -> Option<&'static [&'static str]>;
+    fn completion_words(&self) -> &'static [&'static str];
     fn default_soft_wrap(&self) -> bool;
 }
 ```
 
-Providers built-in (alpha.6): plain, oriscript, markdown, mdx, html, css, javascript.  
-Alvo L1: + rust, python, typescript, nim, ruby, ori-lang.
+Providers built-in: plain, oriscript, ori, markdown, mdx, html, css, javascript,
+typescript/tsx, rust, python, nim e ruby.
 
-Uso no app: `plugin_host.language(lang)` em toggle comment e soft wrap default.
+Uso no app: `plugin_host.language(lang)` em toggle comment, soft wrap, servidor
+LSP default e sugestões offline.
 
 ## Plugin + PluginCtx
 

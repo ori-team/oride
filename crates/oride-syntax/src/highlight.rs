@@ -1,9 +1,10 @@
 //! Motor de highlight: parse tree-sitter → spans por byte.
 
-use tree_sitter::{Parser, Tree};
+use tree_sitter::{Parser, Query, QueryCursor, StreamingIterator, Tree};
 
 use crate::kind::HighlightKind;
 use crate::language::LanguageId;
+use crate::lexical;
 use crate::markdown;
 
 /// Intervalo semi-aberto `[start, end)` em bytes UTF-8.
@@ -74,36 +75,49 @@ impl HighlightEngine {
             return;
         }
 
-        let lang = match language_ts(self.language) {
-            Some(l) => l,
-            None => return,
-        };
-        if self.parser.set_language(&lang).is_err() {
-            return;
+        if let Some(lang) = language_ts(self.language) {
+            if self.parser.set_language(&lang).is_ok() {
+                if let Some(tree) = self.parser.parse(&self.source, None) {
+                    collect_query_spans(
+                        self.language,
+                        &lang,
+                        tree.root_node(),
+                        &self.source,
+                        0,
+                        &mut self.spans,
+                    );
+                    collect_spans(tree.root_node(), &self.source, 0, &mut self.spans);
+                    self.spans.sort_by(|a, b| {
+                        a.start
+                            .cmp(&b.start)
+                            .then_with(|| (a.end - a.start).cmp(&(b.end - b.start)))
+                    });
+                    self.tree = Some(tree);
+                    return;
+                }
+            }
         }
-        let tree = match self.parser.parse(&self.source, None) {
-            Some(t) => t,
-            None => return,
-        };
-        collect_spans(tree.root_node(), &self.source, &mut self.spans);
-        self.spans.sort_by(|a, b| {
-            a.start
-                .cmp(&b.start)
-                .then_with(|| (a.end - a.start).cmp(&(b.end - b.start)))
-        });
-        self.tree = Some(tree);
+
+        // Fallback: highlight léxico ultra-leve em Rust puro
+        self.spans = lexical::collect_lexical_spans(self.language, &self.source, 0);
     }
 }
 
 pub(crate) fn language_ts(id: LanguageId) -> Option<tree_sitter::Language> {
-    let lang = match id {
-        LanguageId::Plain | LanguageId::Markdown | LanguageId::Mdx => return None,
-        LanguageId::OriScript => tree_sitter_oriscript::LANGUAGE.into(),
-        LanguageId::JavaScript => tree_sitter_javascript::LANGUAGE.into(),
-        LanguageId::Html => tree_sitter_html::LANGUAGE.into(),
-        LanguageId::Css => tree_sitter_css::LANGUAGE.into(),
-    };
-    Some(lang)
+    match id {
+        LanguageId::Plain
+        | LanguageId::Markdown
+        | LanguageId::Mdx
+        | LanguageId::Nim
+        | LanguageId::Ori
+        | LanguageId::D
+        | LanguageId::Lua => None,
+        LanguageId::OriScript => Some(tree_sitter_oriscript::LANGUAGE.into()),
+        LanguageId::Rust => Some(tree_sitter_rust::LANGUAGE.into()),
+        LanguageId::C => Some(tree_sitter_c::LANGUAGE.into()),
+        LanguageId::Bash => Some(tree_sitter_bash::LANGUAGE.into()),
+        other => crate::dynamic_grammar::load_dynamic_grammar(other.as_str()),
+    }
 }
 
 /// Highlight de um fragmento (ex.: conteúdo de fence) com offsets absolutos `base`.
@@ -116,29 +130,65 @@ pub(crate) fn highlight_language_slice(
     if slice.is_empty() {
         return out;
     }
-    let Some(lang) = language_ts(language) else {
-        return out;
-    };
-    let mut parser = Parser::new();
-    if parser.set_language(&lang).is_err() {
-        return out;
+    if let Some(lang) = language_ts(language) {
+        let mut parser = Parser::new();
+        if parser.set_language(&lang).is_ok() {
+            if let Some(tree) = parser.parse(slice, None) {
+                collect_query_spans(language, &lang, tree.root_node(), slice, base, &mut out);
+                collect_spans(tree.root_node(), slice, base, &mut out);
+                out.sort_by(|a, b| {
+                    a.start
+                        .cmp(&b.start)
+                        .then_with(|| (a.end - a.start).cmp(&(b.end - b.start)))
+                });
+                return out;
+            }
+        }
     }
-    let Some(tree) = parser.parse(slice, None) else {
-        return out;
-    };
-    let mut local = Vec::new();
-    collect_spans(tree.root_node(), slice, &mut local);
-    for s in local {
-        out.push(HighlightSpan {
-            start: base + s.start,
-            end: base + s.end,
-            kind: s.kind,
-        });
-    }
-    out
+    lexical::collect_lexical_spans(language, slice, base)
 }
 
-fn collect_spans(node: tree_sitter::Node, source: &str, out: &mut Vec<HighlightSpan>) {
+fn collect_query_spans(
+    language: LanguageId,
+    grammar: &tree_sitter::Language,
+    root: tree_sitter::Node,
+    source: &str,
+    base: usize,
+    out: &mut Vec<HighlightSpan>,
+) {
+    for query_source in highlight_queries(language) {
+        let Ok(query) = Query::new(grammar, query_source) else {
+            continue;
+        };
+        let mut cursor = QueryCursor::new();
+        let mut matches = cursor.matches(&query, root, source.as_bytes());
+        while let Some(query_match) = matches.next() {
+            for capture in query_match.captures {
+                let capture_name = query.capture_names()[capture.index as usize];
+                let kind = HighlightKind::from_capture_name(capture_name);
+                if kind == HighlightKind::Normal {
+                    continue;
+                }
+                let start = base + capture.node.start_byte();
+                let end = base + capture.node.end_byte().min(source.len());
+                if start < end {
+                    out.push(HighlightSpan { start, end, kind });
+                }
+            }
+        }
+    }
+}
+
+fn highlight_queries(language: LanguageId) -> &'static [&'static str] {
+    match language {
+        LanguageId::Rust => &[tree_sitter_rust::HIGHLIGHTS_QUERY],
+        LanguageId::C => &[tree_sitter_c::HIGHLIGHT_QUERY],
+        LanguageId::Bash => &[tree_sitter_bash::HIGHLIGHT_QUERY],
+        _ => &[],
+    }
+}
+
+fn collect_spans(node: tree_sitter::Node, source: &str, base: usize, out: &mut Vec<HighlightSpan>) {
     if node.is_named() {
         if let Some(kind) = HighlightKind::from_node_kind(node.kind()) {
             let mut cursor = node.walk();
@@ -147,14 +197,18 @@ fn collect_spans(node: tree_sitter::Node, source: &str, out: &mut Vec<HighlightS
                 let start = node.start_byte();
                 let end = node.end_byte().min(source.len());
                 if start < end {
-                    out.push(HighlightSpan { start, end, kind });
+                    out.push(HighlightSpan {
+                        start: base + start,
+                        end: base + end,
+                        kind,
+                    });
                 }
             }
         }
     }
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        collect_spans(child, source, out);
+        collect_spans(child, source, base, out);
     }
 }
 
@@ -248,6 +302,67 @@ mod tests {
         let mut eng = HighlightEngine::new();
         eng.update(LanguageId::JavaScript, "const x = \"hi\"; // c\n");
         assert!(eng.spans().iter().any(|s| s.kind == HighlightKind::String));
+    }
+
+    #[test]
+    fn highlights_every_l1_language() {
+        let fixtures = [
+            (
+                LanguageId::Rust,
+                "// note\nfn main() { let message = \"hi\"; }",
+            ),
+            (
+                LanguageId::C,
+                "// note\nint main() { char* message = \"hi\"; return 0; }",
+            ),
+            (
+                LanguageId::Bash,
+                "# note\nfunction main() { local message=\"hi\"; echo \"hi\"; }",
+            ),
+            (
+                LanguageId::Python,
+                "# note\ndef main():\n    return \"hi\"\n",
+            ),
+            (
+                LanguageId::TypeScript,
+                "// note\nfunction main(): string { return \"hi\"; }",
+            ),
+            (
+                LanguageId::Tsx,
+                "// note\nfunction App() { return <main>{\"hi\"}</main>; }",
+            ),
+            (LanguageId::Ruby, "# note\ndef main\n  \"hi\"\nend\n"),
+            (LanguageId::Nim, "# note\nproc main() = echo \"hi\""),
+            (
+                LanguageId::Ori,
+                "-- note\nmodule demo\nmain()\n    const message: string = \"hi\"\nend\n",
+            ),
+            (
+                LanguageId::D,
+                "// note\nimport std.stdio;\nvoid main() {\n    writeln(\"hi\");\n}\n",
+            ),
+            (
+                LanguageId::Lua,
+                "-- note\nlocal function main()\n    local s = \"hi\"\n    print(s)\nend\n",
+            ),
+        ];
+
+        for (language, source) in fixtures {
+            let mut engine = HighlightEngine::new();
+            engine.update(language, source);
+            for expected in [
+                HighlightKind::Keyword,
+                HighlightKind::String,
+                HighlightKind::Comment,
+                HighlightKind::Function,
+            ] {
+                assert!(
+                    engine.spans().iter().any(|span| span.kind == expected),
+                    "expected {expected:?} span for {language:?}: {:?}",
+                    engine.spans()
+                );
+            }
+        }
     }
 
     #[test]

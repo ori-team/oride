@@ -18,10 +18,15 @@ pub struct Config {
     pub tree: TreeConfig,
     pub terminal: TerminalConfig,
     pub lsp: LspConfig,
-    /// Captura de mouse (clique, drag, scroll). **Default: off** — ativar no TOML ou menu View.
+    pub markdown: MarkdownConfig,
+    /// Captura de mouse (clique, drag, scroll). **Default: on**.
     pub mouse: bool,
     /// Chord string → action id (`"ctrl+s" = "save"`).
     pub keys: BTreeMap<String, String>,
+    /// Linguagens customizadas e LSP configurados via `[[languages]]`.
+    pub languages: Vec<LanguageConfig>,
+    /// Idioma da interface (ex: "pt-BR", "en-US"). **Default: "pt-BR"**.
+    pub locale: String,
 }
 
 impl Default for Config {
@@ -36,8 +41,11 @@ impl Default for Config {
             tree: TreeConfig::default(),
             terminal: TerminalConfig::default(),
             lsp: LspConfig::default(),
-            mouse: false,
+            markdown: MarkdownConfig::default(),
+            mouse: true,
             keys: default_key_bindings(),
+            languages: Vec::new(),
+            locale: "pt-BR".into(),
         }
     }
 }
@@ -50,6 +58,12 @@ pub struct EditorConfig {
     pub format_on_save: bool,
     /// Aplicar `.editorconfig` ao abrir arquivo (indent).
     pub use_editorconfig: bool,
+    /// Exibir sugestões locais enquanto um identificador é digitado.
+    pub completion_auto: bool,
+    /// Quantidade mínima de caracteres antes de abrir sugestões automáticas.
+    pub completion_min_chars: u8,
+    /// Modo de edição modal (Vim / Neovim).
+    pub modal_mode: bool,
 }
 
 impl Default for EditorConfig {
@@ -59,6 +73,9 @@ impl Default for EditorConfig {
             insert_spaces: true,
             format_on_save: false,
             use_editorconfig: true,
+            completion_auto: true,
+            completion_min_chars: 2,
+            modal_mode: false,
         }
     }
 }
@@ -104,6 +121,8 @@ pub struct LspConfig {
     pub enabled: bool,
     /// Ex.: `["oriscript", "lsp"]`
     pub oriscript_command: Vec<String>,
+    /// Overrides por `LanguageId`, por exemplo `rust = ["rust-analyzer"]`.
+    pub servers: BTreeMap<String, Vec<String>>,
     pub timeout_ms: u64,
 }
 
@@ -112,9 +131,46 @@ impl Default for LspConfig {
         Self {
             enabled: true,
             oriscript_command: vec!["oriscript".into(), "lsp".into()],
+            servers: BTreeMap::new(),
             timeout_ms: 10_000,
         }
     }
+}
+
+/// Configurações específicas para visualização e renderização de Markdown.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MarkdownConfig {
+    /// Renderização embutida de gráficos de imagem no terminal (Kitty/Ghostty/WezTerm).
+    pub terminal_images: bool,
+}
+
+/// Configuração declarativa de linguagem e LSP (`[[languages]]` ou `languages/*.toml`).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct LanguageConfig {
+    /// Identificador da linguagem (ex: "zig", "rust", "elixir").
+    pub id: String,
+    /// Nome de exibição na UI / status bar (ex: "Zig", "Rust").
+    pub name: Option<String>,
+    /// Extensões associadas sem ponto (ex: ["zig", "zon"]).
+    pub extensions: Vec<String>,
+    /// Nomes de arquivo exatos associados (ex: ["build.zig"]).
+    pub filenames: Vec<String>,
+    /// Prefixo de comentário de linha (ex: "// ", "# ").
+    pub line_comment: Option<String>,
+    /// Sufixo de fechamento de comentário de bloco (ex: " -->", " */").
+    pub block_comment_close: Option<String>,
+    /// Comando LSP padrão (ex: ["zls"]).
+    pub lsp_command: Vec<String>,
+    /// Tamanho de tabulação customizado.
+    pub tab_size: Option<u8>,
+    /// Inserir espaços ao teclar Tab.
+    pub insert_spaces: Option<bool>,
+    /// Ativar soft wrap por padrão nesta linguagem.
+    pub soft_wrap: Option<bool>,
+    /// Palavras-chave offline para autocompletar.
+    pub completion_words: Vec<String>,
 }
 
 /// Cores da UI como strings (`"white"`, `"#1a1b26"`, `"reset"`).
@@ -208,6 +264,8 @@ struct EditorConfigPartial {
     insert_spaces: Option<bool>,
     format_on_save: Option<bool>,
     use_editorconfig: Option<bool>,
+    completion_auto: Option<bool>,
+    completion_min_chars: Option<u8>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -269,6 +327,7 @@ struct TerminalPartial {
 struct LspPartial {
     enabled: Option<bool>,
     oriscript_command: Option<Vec<String>>,
+    servers: Option<BTreeMap<String, Vec<String>>>,
     timeout_ms: Option<u64>,
 }
 
@@ -286,13 +345,23 @@ pub(crate) struct RawConfigFile {
     tree: Option<TreePartial>,
     terminal: Option<TerminalPartial>,
     lsp: Option<LspPartial>,
+    markdown: Option<MarkdownPartial>,
     keys: Option<BTreeMap<String, String>>,
+    languages: Option<Vec<LanguageConfig>>,
+    locale: Option<String>,
 }
 
 impl Config {
     pub(crate) fn apply_raw(&mut self, raw: RawConfigFile) {
         if let Some(v) = raw.theme {
+            if let Some(theme_def) = crate::theme::ThemeRegistry::new().get(&v) {
+                self.theme_ui = theme_def.ui.clone();
+                self.syntax = theme_def.syntax.clone();
+            }
             self.theme = v;
+        }
+        if let Some(v) = raw.locale {
+            self.locale = v;
         }
         if let Some(v) = raw.show_line_numbers {
             self.show_line_numbers = v;
@@ -315,6 +384,12 @@ impl Config {
             }
             if let Some(v) = ed.use_editorconfig {
                 self.editor.use_editorconfig = v;
+            }
+            if let Some(v) = ed.completion_auto {
+                self.editor.completion_auto = v;
+            }
+            if let Some(v) = ed.completion_min_chars {
+                self.editor.completion_min_chars = v.max(1);
             }
         }
         if let Some(ui) = raw.ui {
@@ -351,8 +426,20 @@ impl Config {
                     self.lsp.oriscript_command = v;
                 }
             }
+            if let Some(servers) = l.servers {
+                for (language, command) in servers {
+                    if !command.is_empty() {
+                        self.lsp.servers.insert(language, command);
+                    }
+                }
+            }
             if let Some(v) = l.timeout_ms {
                 self.lsp.timeout_ms = v.max(500);
+            }
+        }
+        if let Some(md) = raw.markdown {
+            if let Some(v) = md.terminal_images {
+                self.markdown.terminal_images = v;
             }
         }
         if let Some(keys) = raw.keys {
@@ -360,7 +447,26 @@ impl Config {
                 self.keys.insert(k, v);
             }
         }
+        if let Some(langs) = raw.languages {
+            for lang in langs {
+                if let Some(pos) = self
+                    .languages
+                    .iter()
+                    .position(|l| l.id.eq_ignore_ascii_case(&lang.id))
+                {
+                    self.languages[pos] = lang;
+                } else {
+                    self.languages.push(lang);
+                }
+            }
+        }
     }
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+struct MarkdownPartial {
+    terminal_images: Option<bool>,
 }
 
 fn merge_theme_ui(dst: &mut ThemeUiConfig, src: ThemeUiConfigPartial) {
@@ -526,8 +632,6 @@ pub fn default_key_bindings() -> BTreeMap<String, String> {
         ("f2", "show_diff"),
         // Tier B
         ("f8", "surround"),
-        ("f9", "macro_toggle_record"),
-        ("f10", "macro_play"),
         ("ctrl+shift+t", "multi_picker"),
         ("ctrl+shift+u", "undo_tree"),
     ];

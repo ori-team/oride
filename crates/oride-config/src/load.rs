@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
-use crate::model::{Config, RawConfigFile};
+use crate::model::{Config, LanguageConfig, RawConfigFile};
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -65,7 +65,163 @@ pub fn load_merged(workspace_hint: Option<&Path>) -> Result<Config, ConfigError>
         }
     }
 
+    // Aplica tema personalizado caso venha de pasta ~/.config/oride/themes ou .oride/themes
+    let registry = crate::theme::ThemeRegistry::load_with_paths(workspace_hint);
+    if let Some(theme_def) = registry.get(&cfg.theme) {
+        if cfg.theme_ui == crate::model::ThemeUiConfig::default() {
+            cfg.theme_ui = theme_def.ui.clone();
+        }
+        if cfg.syntax == crate::model::SyntaxColorsConfig::default() {
+            cfg.syntax = theme_def.syntax.clone();
+        }
+    }
+
+    // Merge de linguagens descobertas em ~/.config/oride/languages e .oride/languages
+    for lang in discover_language_configs(workspace_hint) {
+        if !cfg
+            .languages
+            .iter()
+            .any(|l| l.id.eq_ignore_ascii_case(&lang.id))
+        {
+            cfg.languages.push(lang);
+        }
+    }
+
+    // Auto-popula lsp.servers a partir de languages configuradas caso não sobrescrito
+    for lang in &cfg.languages {
+        if !lang.lsp_command.is_empty() && !cfg.lsp.servers.contains_key(&lang.id) {
+            cfg.lsp
+                .servers
+                .insert(lang.id.clone(), lang.lsp_command.clone());
+        }
+    }
+
     Ok(cfg)
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct LanguagesFileWrapper {
+    languages: Option<Vec<LanguageConfig>>,
+}
+
+/// Descobre definições de linguagens em `~/.config/oride/languages/*.toml` e `<workspace>/.oride/languages/*.toml`.
+#[must_use]
+pub fn discover_language_configs(workspace_hint: Option<&Path>) -> Vec<LanguageConfig> {
+    let mut dirs = Vec::new();
+    if let Some(user_dir) = dirs::config_dir().map(|d| d.join("oride").join("languages")) {
+        dirs.push(user_dir);
+    }
+    if let Some(ws) = workspace_hint {
+        dirs.push(ws.join(".oride").join("languages"));
+    }
+
+    let mut result = Vec::new();
+    for dir in dirs {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|e| e.to_str()) == Some("toml") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if let Ok(wrapper) = toml::from_str::<LanguagesFileWrapper>(&content) {
+                            if let Some(langs) = wrapper.languages {
+                                for l in langs {
+                                    if !result
+                                        .iter()
+                                        .any(|x: &LanguageConfig| x.id.eq_ignore_ascii_case(&l.id))
+                                    {
+                                        result.push(l);
+                                    }
+                                }
+                                continue;
+                            }
+                        }
+                        if let Ok(single) = toml::from_str::<LanguageConfig>(&content) {
+                            if !single.id.is_empty()
+                                && !result
+                                    .iter()
+                                    .any(|x: &LanguageConfig| x.id.eq_ignore_ascii_case(&single.id))
+                            {
+                                result.push(single);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    result
+}
+
+/// Salva o tema escolhido na configuração de usuário (`~/.config/oride/config.toml`).
+pub fn save_user_theme(theme_name: &str) -> Result<(), std::io::Error> {
+    let Some(cfg_path) = user_config_path() else {
+        return Ok(());
+    };
+    if let Some(parent) = cfg_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let doc = if cfg_path.is_file() {
+        fs::read_to_string(&cfg_path)?
+    } else {
+        String::new()
+    };
+
+    let mut found = false;
+    let mut new_lines = Vec::new();
+    for line in doc.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("theme =") || trimmed.starts_with("theme=") {
+            new_lines.push(format!("theme = \"{theme_name}\""));
+            found = true;
+        } else {
+            new_lines.push(line.to_string());
+        }
+    }
+    if !found {
+        new_lines.insert(0, format!("theme = \"{theme_name}\""));
+    }
+    let mut output = new_lines.join("\n");
+    if !output.ends_with('\n') {
+        output.push('\n');
+    }
+    fs::write(&cfg_path, output)?;
+    Ok(())
+}
+
+/// Salva o idioma escolhido na configuração de usuário (`~/.config/oride/config.toml`).
+pub fn save_user_locale(locale: &str) -> Result<(), std::io::Error> {
+    let Some(cfg_path) = user_config_path() else {
+        return Ok(());
+    };
+    if let Some(parent) = cfg_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let doc = if cfg_path.is_file() {
+        fs::read_to_string(&cfg_path)?
+    } else {
+        String::new()
+    };
+
+    let mut found = false;
+    let mut new_lines = Vec::new();
+    for line in doc.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("locale =") || trimmed.starts_with("locale=") {
+            new_lines.push(format!("locale = \"{locale}\""));
+            found = true;
+        } else {
+            new_lines.push(line.to_string());
+        }
+    }
+    if !found {
+        new_lines.insert(0, format!("locale = \"{locale}\""));
+    }
+    let mut output = new_lines.join("\n");
+    if !output.ends_with('\n') {
+        output.push('\n');
+    }
+    fs::write(&cfg_path, output)?;
+    Ok(())
 }
 
 fn apply_file(cfg: &mut Config, path: &Path) -> Result<(), ConfigError> {
@@ -99,6 +255,10 @@ mod tests {
 show_line_numbers = false
 [editor]
 tab_size = 2
+completion_auto = false
+completion_min_chars = 3
+[lsp.servers]
+rust = ["rust-analyzer"]
 [keys]
 "ctrl+s" = "quit"
 [ui]
@@ -111,6 +271,12 @@ status_dirty = "red"
         apply_file(&mut cfg, &path).unwrap();
         assert!(!cfg.show_line_numbers);
         assert_eq!(cfg.editor.tab_size, 2);
+        assert!(!cfg.editor.completion_auto);
+        assert_eq!(cfg.editor.completion_min_chars, 3);
+        assert_eq!(
+            cfg.lsp.servers.get("rust"),
+            Some(&vec!["rust-analyzer".to_string()])
+        );
         assert_eq!(cfg.keys.get("ctrl+s").map(String::as_str), Some("quit"));
         assert_eq!(cfg.theme_ui.status_dirty, "red");
         // default key still present

@@ -17,6 +17,9 @@ Exemplo completo: [`assets/config.example.toml`](../assets/config.example.toml).
 | `mouse` | bool | **`false`** | Captura de mouse (clique/drag/scroll). Off por default; também **View → Enable mouse** ou palette |
 | `[editor].tab_size` | u8 | `4` | Largura do Tab com espaços |
 | `[editor].insert_spaces` | bool | `true` | Tab → espaços |
+| `[editor].completion_auto` | bool | `true` | Abre sugestões locais durante a digitação |
+| `[editor].completion_min_chars` | u8 | `2` | Prefixo mínimo para sugestões automáticas |
+| `[markdown].terminal_images` | bool | `false` | Detecção e exibição de gráficos de terminal (Kitty/Ghostty/WezTerm) |
 | `[ui].*` | cor | ver defaults | Tema TUI |
 | `[keys]` | map | bindings P0.2 | Rebind de ações |
 
@@ -61,6 +64,7 @@ cargo test -p oride-keymap
 
 ### `[editor]`
 - `tab_size`, `insert_spaces`, `format_on_save`, `use_editorconfig`
+- `completion_auto`, `completion_min_chars`
 
 ### `[tree]`
 - `width`, `show_hidden`, `git_status`
@@ -69,7 +73,15 @@ cargo test -p oride-keymap
 - `shell` (vazio = `$SHELL`), `default_height`
 
 ### `[lsp]`
-- `enabled`, `oriscript_command` (array), `timeout_ms`
+- `enabled`, `oriscript_command` (compatibilidade), `timeout_ms`
+- `[lsp.servers]`: mapa `LanguageId → argv`; os processos são iniciados sob
+  demanda. OriScript usa `oriscript lsp` e Ori usa `ori-lsp` por default.
+
+```toml
+[lsp.servers]
+rust = ["rust-analyzer"]
+python = ["pylsp"]
+```
 
 ### `[syntax]`
 Cores de highlight (`keyword`, `string`, `comment`, …) — nomes ou `#RRGGBB`.
@@ -78,5 +90,8 @@ Cores de highlight (`keyword`, `string`, `comment`, …) — nomes ou `#RRGGBB`.
 - `Alt+R` alterna **regex**; `Alt+C` case; `Alt+A` acentos.
 
 ### LSP atalhos
-- `Ctrl+Space` complete · `Ctrl+K` hover · `F4` goto · `Ctrl+Shift+I` format
+- Sugestões locais aparecem automaticamente após dois caracteres; `↑↓`
+  seleciona e `Enter`/`Tab` aceita
+- `Ctrl+Space` combina completion semântica do LSP com o fallback local
+- `Ctrl+K` hover · `F4` goto · `Ctrl+Shift+I` format
 - `Ctrl+Shift+M` painel de diagnostics · `Ctrl+R` reload arquivo

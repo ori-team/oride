@@ -32,6 +32,12 @@ pub fn search_with_rg(
     cmd.arg("--glob").arg("!target/**");
     cmd.arg("--glob").arg("!node_modules/**");
     cmd.arg("--glob").arg("!.git/**");
+    if let Some(ref glob) = query.file_glob {
+        let trimmed = glob.trim();
+        if !trimmed.is_empty() {
+            cmd.arg("--glob").arg(trimmed);
+        }
+    }
     if !query.case_sensitive {
         cmd.arg("-i");
     }
@@ -39,7 +45,7 @@ pub fn search_with_rg(
         cmd.arg("-F");
     }
     cmd.arg("--max-count").arg("50"); // por arquivo
-    cmd.arg(&query.pattern);
+    cmd.arg("-e").arg(&query.pattern);
     cmd.arg(".");
 
     let output = cmd
@@ -103,13 +109,17 @@ fn serde_json_lite_match(line: &str) -> Result<Option<SearchHit>, SearchError> {
         .unwrap_or("")
         .trim_end_matches(['\n', '\r'])
         .to_string();
-    let column = data
+    let byte_column = data
         .get("submatches")
         .and_then(|s| s.as_array())
         .and_then(|a| a.first())
         .and_then(|m| m.get("start"))
         .and_then(|s| s.as_u64())
-        .map(|c| c as usize + 1)
+        .map(|column| column as usize)
+        .unwrap_or(0);
+    let column = line_text
+        .get(..byte_column)
+        .map(|prefix| prefix.chars().count() + 1)
         .unwrap_or(1);
 
     Ok(Some(SearchHit {
@@ -118,4 +128,18 @@ fn serde_json_lite_match(line: &str) -> Result<Option<SearchHit>, SearchError> {
         column: column.max(1),
         line_text,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::serde_json_lite_match;
+
+    #[test]
+    fn converts_ripgrep_byte_column_to_character_column() {
+        let json = r#"{"type":"match","data":{"path":{"text":"a.md"},"lines":{"text":"á find\n"},"line_number":1,"submatches":[{"match":{"text":"find"},"start":3,"end":7}]}}"#;
+
+        let hit = serde_json_lite_match(json).unwrap().unwrap();
+
+        assert_eq!(hit.column, 3);
+    }
 }

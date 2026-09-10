@@ -9,5 +9,6 @@ mod types;
 
 pub use client::{LspClient, LspError, LspEvent};
 pub use types::{
-    CompletionItem, Diagnostic, DiagnosticSeverity, HoverInfo, Location, Position, Range,
+    character_column, utf16_column, CompletionItem, Diagnostic, DiagnosticSeverity, HoverInfo,
+    Location, Position, Range,
 };
