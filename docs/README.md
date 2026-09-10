@@ -10,17 +10,19 @@ A pasta `docs/` é a fonte canônica da verdade para todas as especificações d
 ## Para que serve?
 Implementa o princípio de **Documentação Canônica Viva**: o repositório é autossuficiente e todo o conhecimento técnico essencial reside diretamente no código e em arquivos Markdown padronizados.
 
-## Guias Rápidos
-- 📖 [**Manual do Usuário**](guia-de-uso.md) — Instalação, modos de edição (padrão e modal Vim), splits, atalhos e task runner.
-- 🎨 [**Guia de Desenvolvimento de Temas**](themes.md) — Especificação TOML e Live Preview de temas.
-- ⚙️ [**Especificação de Configuração**](config.md) — Referência de opções do `config.toml`.
+## Guias Rápidos de Uso
+- 📖 [**Manual do Usuário (Português)**](guides/pt/guia-de-uso.md) — Instalação, modos de edição (padrão e modal Vim), splits, atalhos e task runner.
+- ⚙️ [**Especificação de Configuração**](guides/pt/config.md) — Referência completa de opções do `config.toml`.
+- 🎨 [**Guia de Desenvolvimento de Temas**](guides/pt/themes.md) — Especificação TOML e Live Preview de temas.
+- 🗂️ [**Portal de Guias do Usuário**](guides/README.md) — Central de manuais em Português (`guides/pt/`) e Inglês (`guides/en/`).
 - 🏗️ [**Arquitetura e Design**](design.md) — Topologia e decisões de engenharia.
 
 ## Roteador Central
 Consulte [`ATLAS.md`](ATLAS.md) como ponto de entrada para navegação guiada por intenção (usuário, desenvolvedor, operador, agente).
 
 ## Inventário de Subdiretórios
-- `en/`: Versão canônica completa de toda a documentação em **Inglês**.
+- `guides/`: Documentação e manuais voltados ao usuário final em **Português** (`guides/pt/`) e **Inglês** (`guides/en/`).
+- `en/`: Versão canônica completa de toda a documentação técnica e de engenharia em **Inglês**.
 - `architecture/`: Arquitetura do sistema, boundaries, contratos de Clean Code e ADRs.
 - `product/`: Visão de produto, proposta de valor e escopo delimitado.
 - `development/`: Padrões de codificação e estratégia exaustiva de testes (TDD/BDD).

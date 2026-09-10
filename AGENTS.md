@@ -53,4 +53,4 @@ cargo test --workspace
 | P3 | LSP engine & tooling |
 | P4 | **polimento 0.2** (help, find, clipboard, session, i18n, …) |
 
-Markdown futuro (preview, fence injections, MDX JSX): `docs/markdown.md` — **não** misturar no P3/P4.
+Markdown futuro (preview, fence injections, MDX JSX): `docs/guides/pt/markdown.md` — **não** misturar no P3/P4.

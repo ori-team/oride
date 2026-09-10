@@ -6,13 +6,13 @@
 
 Status: **`0.2.0`** — mini-IDE TUI contida (editor, árvore de arquivos, terminal PTY, git/SCM com ahead/behind e pull/push, busca & substituição com globs e regex, multi-LSP sob demanda, preview de Markdown com imagens e links, splits dinâmicos, mouse opt-in).  
 Repositório: [ori-team/oride](https://github.com/ori-team/oride).  
-Documentação: [Manual do Usuário](docs/guia-de-uso.md) · [Design](docs/design.md) · [Configuração](docs/config.md) · [Temas](docs/themes.md) · [Roadmap](docs/planning/alpha6-roadmap.md).
+Documentação: [Manual do Usuário](docs/guides/pt/guia-de-uso.md) · [Design](docs/design.md) · [Configuração](docs/guides/pt/config.md) · [Temas](docs/guides/pt/themes.md) · [Roadmap](docs/planning/alpha6-roadmap.md).
 
 ## Objetivos (Produto Contido)
 
 - **Tudo no TUI:** Sem dependência de browser externo para edição, sem inchaço (anti-bloat), sem macros complexas e sem scripts lentos.
 - **Estrutura Completa:** Múltiplas abas, árvore de arquivos com ícones Nerd Fonts, terminal PTY interativo, busca e substituição no buffer e no projeto, status de SCM/Git e sessões leves.
-- **Linguagens Suportadas:** Rust, C, Bash, Markdown, Ori, HTML, CSS, JS/TS, Python, D, Lua, Nim e Ruby — detecção automática, realce sintático, toggle de comentários e injeção de fences em Markdown ([detalhes](docs/syntax.md)).
+- **Linguagens Suportadas:** Rust, C, Bash, Markdown, Ori, HTML, CSS, JS/TS, Python, D, Lua, Nim e Ruby — detecção automática, realce sintático, toggle de comentários e injeção de fences em Markdown ([detalhes](docs/guides/pt/syntax.md)).
 - **LSP sob demanda:** Autocomplete local inteligente + servidores LSP iniciados sob demanda para **Ori** (`ori-lsp`), Rust (`rust-analyzer`), C/C++ (`clangd`), Bash (`bash-language-server`), etc. (totalmente configuráveis via `config.toml`).
 - **Markdown Rico no Terminal:** Tabelas desenhadas com caracteres Unicode, blocos de código com realce sintático e imagens renderizadas em terminais compatíveis (Kitty/Ghostty/WezTerm).
 - **Links no Preview:** Abertura no navegador do sistema via clique de mouse ou `Alt+Enter`.
@@ -89,7 +89,7 @@ cp assets/config.example.toml ~/.config/oride/config.toml
 mkdir -p .oride && cp assets/config.example.toml .oride/config.toml
 ```
 
-Consulte [`docs/config.md`](docs/config.md) para todos os detalhes de configuração.
+Consulte [`docs/guides/pt/config.md`](docs/guides/pt/config.md) para todos os detalhes de configuração.
 
 ## Layout do Workspace
 
@@ -107,10 +107,8 @@ crates/
   oride-app/      # composição da aplicação e loop de eventos
   oride/          # executável binário CLI
 docs/
-  guia-de-uso.md  # manual prático do usuário
+  guides/         # guias práticos do usuário (guides/pt/ e guides/en/)
   design.md       # arquitetura do projeto
-  config.md       # especificação do config.toml
-  themes.md       # guia para criação de temas visuais
 ```
 
 ## Licença

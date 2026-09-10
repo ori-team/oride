@@ -80,7 +80,7 @@ fn print_help() {
          KEYS (see README; rebind in ~/.config/oride/config.toml):\n\
            Ctrl+S save · Ctrl+P open · Ctrl+Shift+P commands\n\
            Ctrl+B tree · Ctrl+` terminal · Ctrl+N/W tabs\n\
-         Config: docs/config.md · assets/config.example.toml"
+         Config: docs/guides/en/config.md · assets/config.example.toml"
     );
 }
 

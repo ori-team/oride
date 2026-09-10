@@ -6,13 +6,13 @@
 
 Status: **`0.2.0`** — self-contained TUI mini-IDE (editor, project file tree, PTY terminal, Git/SCM with ahead/behind and pull/push, project search & replace with globs/regex, on-demand multi-LSP, rich Markdown preview with images and links, dynamic splits, opt-in mouse support).  
 Repository: [ori-team/oride](https://github.com/ori-team/oride).  
-Documentation: [User Guide](docs/en/user-guide.md) · [Architecture & Design](docs/en/design.md) · [Configuration](docs/en/config.md) · [Themes](docs/en/themes.md) · [Roadmap](docs/en/planning/alpha6-roadmap.md).
+Documentation: [User Guide](docs/guides/en/user-guide.md) · [Architecture & Design](docs/en/design.md) · [Configuration](docs/guides/en/config.md) · [Themes](docs/guides/en/themes.md) · [Roadmap](docs/en/planning/alpha6-roadmap.md).
 
 ## Goals (Lean & Contained Product)
 
 - **Everything in the TUI:** Zero browser preview dependency, no slow scripting bloat, no heavy macro engines.
 - **Full-featured Layout:** Multiple buffer tabs, project tree with Nerd Font glyphs, interactive PTY terminal, buffer & project-wide find and replace, Git/SCM status, lightweight workspace sessions.
-- **Supported Languages:** Rust, C, Bash, Markdown, Ori, HTML, CSS, JS/TS, Python, D (dlang), Lua, Nim, and Ruby — auto-detection, syntax highlight, comment toggling, and Markdown fence injections ([details](docs/en/syntax.md)).
+- **Supported Languages:** Rust, C, Bash, Markdown, Ori, HTML, CSS, JS/TS, Python, D (dlang), Lua, Nim, and Ruby — auto-detection, syntax highlight, comment toggling, and Markdown fence injections ([details](docs/guides/en/syntax.md)).
 - **On-demand LSP:** Local intelligent autocomplete + language servers spawned on-demand for **Ori** (`ori-lsp`), Rust (`rust-analyzer`), C/C++ (`clangd`), Bash (`bash-language-server`), etc. (fully configurable in `config.toml`).
 - **Rich Terminal Markdown Preview:** Unicode box-drawing tables, fenced code blocks with syntax highlighting, and terminal graphics protocol rendering on supported terminals (Kitty/Ghostty/WezTerm).
 - **Preview Links:** Open links in the system web browser via mouse click or `Alt+Enter`.
@@ -89,7 +89,7 @@ cp assets/config.example.toml ~/.config/oride/config.toml
 mkdir -p .oride && cp assets/config.example.toml .oride/config.toml
 ```
 
-See [`docs/en/config.md`](docs/en/config.md) for full configuration options.
+See [`docs/guides/en/config.md`](docs/guides/en/config.md) for full configuration options.
 
 ## Workspace Layout
 
@@ -107,11 +107,9 @@ crates/
   oride-app/      # application orchestration & event loop
   oride/          # CLI binary
 docs/
+  guides/         # user guides (guides/en/ & guides/pt/)
   en/             # canonical English documentation
-  guia-de-uso.md  # Portuguese user guide
   design.md       # architecture & design
-  config.md       # configuration reference
-  themes.md       # theme development guide
 ```
 
 ## License

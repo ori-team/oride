@@ -191,7 +191,7 @@ Oride includes over 10 built-in themes (`tokyo-night`, `dracula`, `nord`, `one-d
 
 - **Switching Themes:** Open the Command Palette (`Ctrl+Shift+P`), type *Theme*, and scroll to see **Live Preview** in real time.
 - **Creating Custom Themes:**
-  Save your theme in `~/.config/oride/themes/my-theme.toml`. Oride discovers it automatically. See [`docs/en/themes.md`](themes.md) for theme structure details.
+  Save your theme in `~/.config/oride/themes/my-theme.toml`. Oride discovers it automatically. See the [Theme Development Guide](themes.md) for theme structure details.
 
 ---
 

@@ -4,7 +4,7 @@ Oride usa **tree-sitter** (e pipeline MD próprio) para colorir o buffer ativo.
 
 ## Linguagens first-class
 
-**Normativo:** [`docs/planning/alpha6-roadmap.md`](planning/alpha6-roadmap.md) §3.
+**Normativo:** [`docs/planning/alpha6-roadmap.md`](../../planning/alpha6-roadmap.md) §3.
 
 | LanguageId | Extensões | Grammar / motor | Estado |
 |------------|-----------|-----------------|------------------|

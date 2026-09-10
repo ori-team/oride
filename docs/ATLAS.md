@@ -15,9 +15,11 @@ Project Atlas natively compiles workforce artifacts and skills for multi-agent e
 
 ## I want to use the product
 
-- [Configuration Reference](config.md) — TOML configuration options, keymaps, mouse, and terminal defaults
-- [Themes Guide & Tutorial](themes.md) — complete guide to creating and customizing color themes with live preview
-- [Syntax & Languages](syntax.md) — language detection, Tree-Sitter support, and Markdown preview
+- [User Guide (Português)](guides/pt/guia-de-uso.md) — Manual do usuário, instalação, modo modal Vim, splits e task runner
+- [User Guide (English)](guides/en/user-guide.md) — Complete user manual in English
+- [Configuration Reference](guides/pt/config.md) — TOML configuration options, keymaps, mouse, and terminal defaults
+- [Themes Guide & Tutorial](guides/pt/themes.md) — Complete guide to creating and customizing color themes with live preview
+- [Syntax & Languages](guides/pt/syntax.md) — Language detection, Tree-Sitter support, and Markdown preview
 
 ## I want to develop/contribute
 
@@ -43,7 +45,7 @@ Project Atlas natively compiles workforce artifacts and skills for multi-agent e
 ## Architecture / decisions / specs
 
 - [Design Document](design.md)
-- [Configuration Specification](config.md)
+- [Configuration Specification](guides/pt/config.md)
 - [Plugin Architecture](plugin-api.md)
 
 ## Goals

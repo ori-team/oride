@@ -10,12 +10,12 @@ The `docs/en/` directory is the canonical English documentation suite for engine
 ## Purpose
 It implements the **Living Canonical Documentation** principle: the repository is self-contained and all essential technical knowledge lives directly alongside the code in standardized Markdown files.
 
-## Quick Links
-- 📖 [**User Guide**](user-guide.md) — Comprehensive guide on installation, editing paradigms (Standard & Vim Modal), window splits, keybindings, task runner, and diagnostics.
-- 🎨 [**Theme Development Guide**](themes.md) — Declarative TOML theme specification and Live Preview.
-- ⚙️ [**Configuration Reference**](config.md) — Exhaustive guide for `config.toml` options and LSP configuration.
+## User & Developer Quick Links
+- 📖 [**User Guide**](../guides/en/user-guide.md) — Comprehensive guide on installation, editing paradigms (Standard & Vim Modal), window splits, keybindings, task runner, and diagnostics.
+- ⚙️ [**Configuration Reference**](../guides/en/config.md) — Exhaustive guide for `config.toml` options and LSP configuration.
+- 🎨 [**Theme Development Guide**](../guides/en/themes.md) — Declarative TOML theme specification and Live Preview.
+- 🗂️ [**User Guides Portal**](../guides/README.md) — Central portal for English (`guides/en/`) and Portuguese (`guides/pt/`) manuals.
 - 🏗️ [**Architecture & Design**](design.md) — Modular Rust design, crate boundaries, and technical stack decisions.
-- 🗂️ [**Syntax Highlighting & Languages**](syntax.md) — Tree-Sitter highlighting engine, L1 languages, and fallbacks.
 - 🔌 [**Plugin API Specification**](plugin-api.md) — External plugin protocols, stdin/stdout JSON, and extension mechanisms.
 
 ## Central Intent Router

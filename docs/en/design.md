@@ -54,11 +54,9 @@ oride/
   README.md                     # Canonical English README
   README.pt-BR.md               # Portuguese README
   docs/
+    guides/                     # User guides (guides/en/ and guides/pt/)
     en/                         # Canonical English documentation
     design.md                   # Architecture & design
-    config.md                   # Configuration specification
-    themes.md                   # Theme development guide
-    guia-de-uso.md              # Portuguese user guide
   crates/
     oride-core/                 # Buffer (Rope), Selection, Documents, Undo history
     oride-config/               # Layered TOML loading & validation

@@ -10,7 +10,7 @@
 ## Recent Milestones
 
 - ✅ Implemented dynamic external i18n via TOML catalogs (`pt-BR.toml`, `en-US.toml`, user config dirs).
-- ✅ Published theme development tutorial and specification in `docs/themes.md`.
+- ✅ Published theme development tutorial and specification in `docs/guides/pt/themes.md` and `docs/guides/en/themes.md`.
 - ✅ Implemented Vim-style modal editing engine (`Normal`, `Insert`, `Visual`, `VisualLine`, `:` command bar).
 - ✅ Built integrated task runner (`tasks.toml`) with magic variable substitution and PTY execution.
 - ✅ Added proactive system & LSP environment diagnostics modal (`:health`).
