@@ -6,7 +6,7 @@
 
 Status: **`0.2.0`** — self-contained TUI mini-IDE (editor, project file tree, PTY terminal, Git/SCM with ahead/behind and pull/push, project search & replace with globs/regex, on-demand multi-LSP, rich Markdown preview with images and links, dynamic splits, opt-in mouse support).  
 Repository: [ori-team/oride](https://github.com/ori-team/oride).  
-Documentation: [User Guide](docs/guides/en/user-guide.md) · [Architecture & Design](docs/en/design.md) · [Configuration](docs/guides/en/config.md) · [Themes](docs/guides/en/themes.md) · [Roadmap](docs/en/planning/alpha6-roadmap.md).
+Documentation: [User Guide](docs/guides/en/user-guide.md) · [Architecture & Design](docs/en/design.md) · [Configuration](docs/guides/en/config.md) · [Themes](docs/guides/en/themes.md) · [Roadmap](ROADMAP.md).
 
 ![Oride Interface](assets/oride-interface.png)
 
@@ -134,19 +134,27 @@ docs/
   design.md       # architecture & design
 ```
 
-## Roadmap & Upcoming Slices (`v0.3.0`)
+## Roadmap
 
-Oride follows a strict **lean, contained, and fail-closed** philosophy. The next planned slices include:
+Oride follows a strict **lean, contained, and fail-closed** philosophy with an uncompressed binary budget `<= 12MB`, startup time `< 10ms`, and input latency `< 5ms`.
 
-- [ ] **Smart Delimiter Auto-Pairing:** Automatic insertion and wrapping of brackets (`()`, `[]`, `{}`) and quotes (`""`, `''`).
-- [ ] **Modal Text Objects:** Expansion of Vim-style motion text objects (`ci(`, `da"`, `yiw`).
-- [ ] **Git Hunk Staging:** Interactive patch/hunk staging within the SCM panel (`git add -p` style).
-- [ ] **LSP Code Navigation:** Symbol outline / breadcrumbs picker and basic snippet expansion.
-- [ ] **PTY Scrollback History:** Navigable scrollback buffer for the embedded terminal panel.
-- [ ] **Tree-Sitter Expansion:** Streamlined pluggable grammar bindings for additional systems and scripting languages.
-- [ ] **Lua Plugin Engine (`mlua`):** Scriptable extension system allowing users to write custom commands, buffer transformations, and event hooks (`on_open`, `on_save`) via embedded Lua scripts.
+### Delivered Milestones
 
-> For detailed technical specifications, architectural DAGs, and out-of-scope boundaries, check out the [Roadmap Specification](docs/en/planning/alpha6-roadmap.md).
+- [x] **`v0.1.0` — Contained TUI Foundation:** Rope buffers, file tree, interactive PTY terminal, buffer/project search, Git status badges, Markdown preview, on-demand multi-LSP client, splits, and multi-cursor.
+- [x] **`v0.2.0` — First-Class Languages & Media:** 13 supported languages, terminal graphics protocols (Kitty/Sixel/iTerm2), clickable links, Git sync & CLI staging (`s`/`u`/`c`/`P`/`p`), persistent session layouts, Vim modal mode, declarative task runner (`tasks.toml`), diagnostics (`:health`), dynamic i18n, and universal cross-platform packaging.
+
+### Upcoming Slices (Road to `v1.0.0`)
+
+- [ ] **`v0.3.0` — Extensibility & Editing Ergonomics:** Lua plugin engine (`mlua`), smart delimiter auto-pairing, modal text objects (`ci"`, `da(`), PTY scrollback history, and LSP symbol outline (`Ctrl+Shift+O`).
+- [ ] **`v0.4.0` — Extreme Performance & Large Files:** Large file streaming mode (>100MB without UI freeze), zero-copy viewport rendering, lazy grammar initialization (<5ms boot), and interactive Git hunk staging.
+- [ ] **`v0.5.0` — Code Intelligence & Refactoring:** LSP code actions / quickfixes (`Alt+Enter`), project-wide symbol renaming (`F2`), tabstop snippets, and direct diagnostics navigation.
+- [ ] **`v0.6.0` — Large-Scale Fuzzy Matching & Resilient Sessions:** High-performance fuzzy matching engine (100k+ files), crash recovery swap sessions, and persistent jump list.
+- [ ] **`v0.7.0` — Visual Diffs & In-TUI Git Tooling:** Side-by-side split visual diff viewer, subtle inline Git blame virtual text, and nested `.gitignore`/submodules.
+- [ ] **`v0.8.0` — Plugin Ecosystem & Secure Sandboxing:** Dynamic language providers via Lua, declarative security sandbox (`config.toml`), and expanded lifecycle hooks.
+- [ ] **`v0.9.0` — TUI Accessibility & Unicode Hardening:** High-contrast themes, CJK & emoji width alignment, binary file safety, and buffer fuzzing.
+- [ ] **`v1.0.0` — Production Stability (LTS):** Lua API freeze, config schema freeze, automated latency (<5ms) and boot (<10ms) regression benchmarks.
+
+> For detailed technical specifications, architectural DAGs, and out-of-scope boundaries, check out the full [Roadmap Specification](docs/en/planning/roadmap.md) or [ROADMAP.md](ROADMAP.md).
 
 ## Contributing
 

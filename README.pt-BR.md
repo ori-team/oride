@@ -6,7 +6,7 @@
 
 Status: **`0.2.0`** — mini-IDE TUI contida (editor, árvore de arquivos, terminal PTY, git/SCM com ahead/behind e pull/push, busca & substituição com globs e regex, multi-LSP sob demanda, preview de Markdown com imagens e links, splits dinâmicos, mouse opt-in).  
 Repositório: [ori-team/oride](https://github.com/ori-team/oride).  
-Documentação: [Manual do Usuário](docs/guides/pt/guia-de-uso.md) · [Design](docs/design.md) · [Configuração](docs/guides/pt/config.md) · [Temas](docs/guides/pt/themes.md) · [Roadmap](docs/planning/alpha6-roadmap.md).
+Documentação: [Manual do Usuário](docs/guides/pt/guia-de-uso.md) · [Design](docs/design.md) · [Configuração](docs/guides/pt/config.md) · [Temas](docs/guides/pt/themes.md) · [Roadmap](ROADMAP.md).
 
 ![Interface do Oride](assets/oride-interface.png)
 
@@ -133,19 +133,27 @@ docs/
   design.md       # arquitetura do projeto
 ```
 
-## Roadmap e Próximos Slices (`v0.3.0`)
+## Roadmap
 
-O Oride segue uma filosofia rígida de **editor contido, enxuto e resiliente (fail-closed)**. As próximas fatias planejadas incluem:
+O Oride segue uma filosofia rígida de **editor contido, enxuto e resiliente (fail-closed)**, com orçamento de binário `<= 12MB`, inicialização `< 10ms` e latência de entrada `< 5ms`.
 
-- [ ] **Auto-Pairing Inteligente de Delimitadores:** Inserção e fechamento automático de parênteses, colchetes, chaves e aspas.
-- [ ] **Text Objects no Modo Modal:** Expansão de comandos de texto estilo Vim (`ci(`, `da"`, `yiw`).
-- [ ] **Staging de Hunks no Git:** Staging interativo por bloco de alteração no painel SCM (estilo `git add -p`).
-- [ ] **Navegação de Código via LSP:** Seletor de símbolos/outline e expansão leve de snippets.
-- [ ] **Histórico de Scrollback no PTY:** Buffer navegável para rolar saídas longas no terminal embutido.
-- [ ] **Expansão de Gramáticas Tree-Sitter:** Mecanismo modular simplificado para inclusão de novas linguagens.
-- [ ] **Motor de Plugins em Lua (`mlua`):** Sistema de extensão programável permitindo comandos customizados, manipulação de buffers e ganchos de eventos (`on_open`, `on_save`) via scripts Lua embutidos.
+### Marcos Concluídos
 
-> Para especificações técnicas detalhadas, DAGs de implementação e o que está fora de escopo, consulte o [Plano de Roadmap](docs/planning/alpha6-roadmap.md).
+- [x] **`v0.1.0` — Fundação da Mini-IDE TUI:** Buffers Rope, árvore de arquivos, terminal interativo PTY, busca em buffer/projeto, badges Git, preview Markdown, cliente multi-LSP sob demanda, splits e múltiplos cursores.
+- [x] **`v0.2.0` — Linguagens First-Class e Mídia:** 13 linguagens nativas, protocolos gráficos de terminal (Kitty/Sixel/iTerm2), links clicáveis, Git sync e staging CLI (`s`/`u`/`c`/`P`/`p`), persistência de sessão, modo modal Vim, task runner (`tasks.toml`), diagnósticos (`:health`), i18n dinâmico e instaladores universais.
+
+### Próximos Slices (Rumo à `v1.0.0`)
+
+- [ ] **`v0.3.0` — Extensibilidade & Ergonomia de Edição:** Motor de plugins em Lua (`mlua`), auto-pairing de delimitadores, text objects modais (`ci"`, `da(`), histórico de scrollback no PTY e outline de símbolos LSP (`Ctrl+Shift+O`).
+- [ ] **`v0.4.0` — Performance Extrema & Arquivos Grandes:** Modo para arquivos gigantes (>100MB em streaming sem travar a UI), renderização zero-copy do viewport, lazy loading de gramáticas (<5ms boot) e staging interativo de hunks no Git.
+- [ ] **`v0.5.0` — Inteligência de Código & Refatoração:** LSP code actions / quickfix (`Alt+Enter`), renomeação de símbolos no projeto (`F2`), snippets com tabstops e navegação direta de diagnósticos.
+- [ ] **`v0.6.0` — Busca Fuzzy em Larga Escala & Sessões:** Motor de busca fuzzy multi-thread (100k+ arquivos), recuperação de sessão via swap e histórico persistente de jump list.
+- [ ] **`v0.7.0` — Diffs Visuais & Ferramentas Git In-TUI:** Visualizador de diff side-by-side em split, git blame sutil em virtual text e suporte a submódulos e `.gitignore` aninhados.
+- [ ] **`v0.8.0` — Ecossistema de Plugins & Sandboxing:** LanguageProviders dinâmicos via Lua, sandbox declarativo de segurança (`config.toml`) e ganchos de ciclo de vida expandidos.
+- [ ] **`v0.9.0` — Acessibilidade TUI & Blindagem Unicode:** Temas de alto contraste, alinhamento preciso de largura de CJK/Emojis, blindagem contra arquivos binários e fuzzing.
+- [ ] **`v1.0.0` — Estabilidade de Produção (LTS):** Congelamento da API Lua, congelamento do esquema de configuração, benchmarks automatizados de latência (<5ms) e boot (<10ms).
+
+> Para especificações técnicas detalhadas, DAGs de implementação e o que está fora de escopo, consulte o [Plano de Roadmap Oficial](docs/planning/roadmap.md) ou [ROADMAP.md](ROADMAP.md).
 
 ## Contribuição
 
