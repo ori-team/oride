@@ -1,10 +1,10 @@
 # Oride
 
-**Oride** (Ori + IDE) is a modular **terminal code editor** focused on
-[OriScript](https://github.com/raillen/ori-script), with a navigable project
-tree, collapsible embedded terminal, and first-class syntax support for
-OriScript, Ori, Markdown, HTML, CSS, JavaScript/TypeScript, Rust, Python, D (dlang),
-Lua, Nim, and Ruby.
+**Oride** (Ori + IDE) is a modular, lightweight, and extensible **terminal code editor / IDE**
+built in Rust, featuring a navigable project tree, collapsible embedded terminal,
+modal editing, integrated task runner, diagnostic system, and syntax support for
+multiple languages (Rust, C, Bash, Markdown, Ori, HTML, CSS, JavaScript/TypeScript,
+Python, D, Lua, Nim, and Ruby).
 
 Status: **`0.2.0`** — mini-IDE TUI contida (editor, tree, terminal, git/SCM com ahead/behind e pull/push, find & replace com globs, multi-LSP sob demanda, MD preview rico com imagens e links, splits dinâmicos, mouse opt-in).
 Repo: [ori-team/oride](https://github.com/ori-team/oride).  
@@ -14,11 +14,11 @@ Docs: [design](docs/design.md) · [config](docs/config.md) · [markdown](docs/ma
 
 - Tudo no TUI — **sem** preview HTML/browser, **sem** macros (removidas por anti-bloat), **sem** host de plugins externos
 - Multi-tab, tree, terminal PTY, find & replace (buffer + project), git status/SCM, session leve
-- **First-class languages:** OriScript, Ori-lang, Markdown, HTML, CSS, JS/TS,
-  Rust, Python, D (dlang), Lua, Nim and Ruby — detect, highlight, comment toggle and Markdown
+- **Supported languages:** Rust, C, Bash, Markdown, Ori, HTML, CSS, JS/TS,
+  Python, D (dlang), Lua, Nim and Ruby — detect, highlight, comment toggle and Markdown
   fence injection ([details](docs/syntax.md))
-- Autocomplete local para linguagens first-class + LSP sob demanda para
-  **OriScript** (`oriscript lsp`) e **Ori** (`ori-lsp`); outros servidores são configuráveis
+- Autocomplete local + LSP sob demanda para
+  **Ori** (`ori-lsp`), Rust (`rust-analyzer`), C/C++ (`clangd`), Bash (`bash-language-server`), etc. (totalmente configuráveis)
 - MD preview **no terminal** com tabelas em caixas Unicode, blocos de código com realce sintático e imagens placeholder
 - Links no preview → abrir no **navegador do sistema** (clique com mouse ou `Alt+Enter`)
 - Mouse **opt-in** (`mouse = false` default) e redimensionamento de divisores por arrasto (drag)
@@ -140,11 +140,6 @@ docs/
   design.md       # architecture & roadmap
   config.md       # TOML reference
 ```
-
-## Relation to OriScript
-
-Oride is a **separate repository**. It does not vendor the OriScript compiler.
-Language intelligence uses the `oriscript` CLI / LSP on `PATH`.
 
 ## License
 
