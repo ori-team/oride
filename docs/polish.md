@@ -1,6 +1,6 @@
-# Polimento 0.1 (P4) + LSP (P3)
+# Polimento e Histórico de Releases (P4 + P3)
 
-Histórico de polish. Roadmap atual: [`planning/alpha6-roadmap.md`](planning/alpha6-roadmap.md) (**0.1.0-alpha.6**).
+Histórico de polish. Roadmap atual: [`planning/alpha6-roadmap.md`](planning/alpha6-roadmap.md) (**0.2.0**).
 
 ## Feito (até alpha.5; consolidado em alpha.6)
 

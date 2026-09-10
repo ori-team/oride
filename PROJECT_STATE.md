@@ -2,10 +2,10 @@
 
 - Project: **Oride Terminal IDE**
 - Framework: **Project Atlas v0.4.2**
-- Current phase: **P04 — Polimento 0.1**
+- Current phase: **P04 — Polimento 0.2**
 - Current goal: **Modal Editing, Task Runner & Diagnostics**
 - Context methodology: **Lean Progressive Context (LPC)**
-- Last updated: `2026-09-10T18:52:00Z`
+- Last updated: `2026-09-10T20:20:00Z`
 
 ## Recent Milestones
 
@@ -18,7 +18,7 @@
 
 ## Next action
 
-- Continue polish toward v0.1.0 release.
+- Continue polish and stabilization for v0.2.0 release.
 - Maintain Atlas Framework governance and goal tracking.
 
 ## Recovery order

@@ -7,7 +7,7 @@
     "description": "Fast, lightweight, extensible terminal IDE (TUI) with modal editing, embedded PTY terminal, proactive LSP diagnostics, task runner, and dynamic plugin/theming ecosystem."
   },
   "stack": {
-    "languages": ["rust", "oriscript", "c", "bash", "markdown"],
+    "languages": ["rust", "ori", "c", "bash", "markdown"],
     "ui": ["ratatui", "crossterm"],
     "editor": ["oride-core", "ropey"],
     "syntax": ["tree-sitter", "tree-sitter-highlight"],

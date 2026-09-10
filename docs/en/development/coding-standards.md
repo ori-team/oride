@@ -1,7 +1,7 @@
 # Coding & Engineering Standards
 
 1. **Formatting & Style**:
-   - All code must pass official language formatters (`cargo fmt`, `prettier`, etc.) without exception.
+   - All code must pass official language formatters (`cargo fmt` / `rustfmt`) and linters (`cargo clippy --all-targets -- -D warnings`) without exception.
    - Line lengths should be maintained within 100 characters where reasonable.
 
 2. **Types & Errors**:

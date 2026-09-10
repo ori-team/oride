@@ -63,7 +63,7 @@ pub struct LspClient {
 }
 
 impl LspClient {
-    /// Spawna o comando (ex.: `oriscript lsp`) com cwd = root.
+    /// Spawna o comando (ex.: `rust-analyzer` ou `clangd`) com cwd = root.
     pub fn spawn(
         command: &[String],
         root: impl AsRef<Path>,

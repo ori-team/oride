@@ -43,5 +43,25 @@ flowchart LR
 - **Supply Chain Security**: Auditing dependencies against known vulnerability databases (`cargo audit`).
 
 ### D. Performance & Stability
-- **Benchmarks**: Continuous measurement of latency and memory allocation.
-- **Concurrency Verification**: Detection of race conditions and resource deadlocks.
+- **Benchmarks**: Continuous measurement of latency and memory allocation per editing operation.
+- **Concurrency Verification**: Detection of race conditions, mutex contention, and thread safety across async channels.
+- **Stress & Load Testing**: Continuous stress operations on large text buffers (Ropey) and input event saturation.
+
+### E. Terminal UI & User Experience (TUI)
+- **Component & Widget Tests**: Isolated rendering and headless assertions using Ratatui's `TestBackend`.
+- **Input Integration Tests**: Simulation of realistic keystroke flows and Crossterm escape sequences without a physical TTY.
+- **Visual Layout Stability**: Character-cell buffer assertions ensuring stability across splits, dialogs, and status bar.
+- **Ergonomics & Accessibility**: Color contrast verification, dark/light theme support, and 100% keyboard navigability.
+
+---
+
+## 3. Recommended Execution Commands
+
+| Category | Canonical Tool | Standard Command |
+|---|---|---|
+| Unit & Integration Tests | Cargo Test | `cargo test --workspace` |
+| Formatting | Rustfmt | `cargo fmt --all -- --check` |
+| Linter & Conformance | Clippy | `cargo clippy --all-targets -- -D warnings` |
+| Security & Vulnerabilities | Cargo Audit | `cargo audit` |
+| Tests with Full Output | Cargo Test | `cargo test --workspace -- --nocapture` |
+| Optimized Build | Cargo Release | `cargo build --release` |

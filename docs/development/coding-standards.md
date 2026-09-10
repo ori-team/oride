@@ -1,7 +1,7 @@
 # Padrões de Codificação e Engenharia
 
 1. **Formatação e Estilo**:
-   - Todo código deve passar por formatadores oficiais da linguagem (`gofmt`, `prettier`, `black`, `rustfmt`) sem exceção.
+   - Todo código deve passar pelo formatador oficial (`cargo fmt` / `rustfmt`) e pelo linter (`cargo clippy --all-targets -- -D warnings`) sem exceção.
    - Linhas mantidas em até 100 caracteres quando razoável.
 
 2. **Tipagem e Erros**:

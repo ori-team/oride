@@ -2,7 +2,7 @@
 
 > **Superseded.** O plano normativo atual é  
 > **[`alpha6-roadmap.md`](alpha6-roadmap.md)**  
-> (release **`0.1.0-alpha.6`**, linguagens first-class, MD links/imagens no terminal, anti-bloat).
+> (definido em `0.1.0-alpha.6` e consolidado na release **`0.2.0`**, linguagens first-class, MD links/imagens no terminal, anti-bloat).
 
 Este arquivo permanece só como histórico das decisões P5–P8. O que já foi entregue:
 

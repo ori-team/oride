@@ -1,7 +1,7 @@
-//! Cliente LSP mínimo (stdio, Content-Length framing).
+//! Cliente LSP mínimo e desacoplado (stdio, Content-Length framing).
 //!
-//! Focado em `oriscript lsp`: initialize, sync de docs, diagnostics,
-//! hover, completion, definition e formatting.
+//! Conecta-se a language servers no `$PATH` (`rust-analyzer`, `clangd`, etc.):
+//! initialize, sync de documentos, diagnostics, hover, completion, definition e formatting.
 
 mod client;
 mod protocol;

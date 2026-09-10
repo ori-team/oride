@@ -13,9 +13,9 @@ Este documento define o **contrato mandatório de engenharia de software** para 
 
 ## 2. Direção das Dependências (Clean Architecture)
 
-- O fluxo de dependência aponta sempre **para dentro**, em direção às regras de negócio essenciais.
-- Mecanismos externos (bancos de dados, frameworks web, CLI, bibliotecas de terceiros) são detalhes de infraestrutura encapsulados por adapters.
-- O core da aplicação desconhece protocolos externos ou fornecedores específicos de nuvem.
+- O fluxo de dependência aponta sempre **para dentro**, em direção às regras essenciais de negócio e edição.
+- Mecanismos externos (sistemas de arquivos, subprocessos, Git CLI, PTY, LSP e bibliotecas de UI de terminal) são detalhes de infraestrutura encapsulados por adaptadores.
+- O core da aplicação desconhece camadas visuais de apresentação e protocolos externos específicos.
 
 ## 3. Modularidade e Desacoplamento
 

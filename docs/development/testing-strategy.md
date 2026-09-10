@@ -46,24 +46,24 @@ flowchart LR
 
 ### D. Performance, Carga e Estresse
 - **Benchmarks**: Medição contínua de latência e consumo de memória por operação.
-- **Testes de Concorrência & Deadlock**: Detecção de condições de corrida (`-race`), bloqueios mútuos e vazamentos de recursos/goroutines.
-- **Testes de Estresse & Carga**: Submissão a picos de tráfego e limites extremos para verificar comportamento de degradação graciosa.
+- **Testes de Concorrência & Deadlock**: Detecção de condições de corrida, contenção de mutexes e verificação de segurança de threads em buffers e canais assíncronos.
+- **Testes de Estresse & Carga**: Operações contínuas em buffers gigantes (Ropey) e saturação de eventos de entrada.
 
-### E. Frontend, UI e Experiência do Usuário
-- **Testes de Componentes**: Renderização isolada e testes de interação com frameworks de teste modernos.
-- **Testes End-to-End (E2E)**: Simulação de jornadas reais de usuário via navegadores headless (Playwright / Cypress).
-- **Regressão Visual**: Comparação de screenshots para evitar desvios visuais de layout.
-- **Acessibilidade**: Varredura automatizada contra as diretrizes WCAG 2.1 AA (axe-core).
+### E. Terminal UI e Experiência do Usuário (TUI)
+- **Testes de Componentes & Widgets**: Renderização isolada e asserções sem TTY utilizando o `TestBackend` da biblioteca Ratatui.
+- **Testes de Integração de Entrada**: Simulação de fluxos reais de digitação e sequências de escape do Crossterm sem necessidade de terminal físico.
+- **Regressão Visual de Layout**: Asserção do buffer de células de caracteres para garantir estabilidade de splits, modais e barra de status.
+- **Acessibilidade e Ergonomia**: Garantia de contraste de cores, suporte a temas claros/escuros e navegação 100% acessível via teclado.
 
 ---
 
 ## 3. Comandos de Execução Recomendados
 
-| Categoria | Exemplo de Ferramenta | Comando Padrão |
-|-----------|------------------------|----------------|
-| Unitário & Corrida | Go test / Vitest / Pytest | `go test -v -race ./...` |
-| Formatação | Official formatter | `gofmt -d .` ou `prettier --check .` |
-| Linter | Staticcheck / ESLint / Ruff | `staticcheck ./...` |
-| Segurança | Secret scanner / Trivy | `atlas tool scan-secrets .` |
-| UI & E2E | Playwright | `npx playwright test` |
-| Carga | k6 / Vegeta | `k6 run load-test.js` |
+| Categoria | Ferramenta Canônica | Comando Padrão |
+|-----------|---------------------|----------------|
+| Unitário & Integração | Cargo Test | `cargo test --workspace` |
+| Formatação | Rustfmt | `cargo fmt --all -- --check` |
+| Linter & Conformance | Clippy | `cargo clippy --all-targets -- -D warnings` |
+| Auditoria de Segurança | Cargo Audit | `cargo audit` |
+| Testes com Saída Completa | Cargo Test | `cargo test --workspace -- --nocapture` |
+| Compilação Otimizada | Cargo Release | `cargo build --release` |

@@ -13,7 +13,7 @@ Guia para agentes que implementam o editor TUI **Oride**.
 | Crates | `oride-*` |
 | Config | TOML (`~/.config/oride/`, `.oride/`) |
 | Design | `docs/design.md` |
-| Versão | SemVer a partir de `0.1.0-alpha.x` |
+| Versão | SemVer (versão atual `0.2.0`) |
 
 ## Skills (obrigatórias neste repo)
 
@@ -51,6 +51,6 @@ cargo test --workspace
 | P1 | tabs, árvore, terminal, palette (alpha.2) |
 | P2 | tree-sitter + Markdown rico (alpha.3) |
 | P3 | LSP engine & tooling |
-| P4 | **polimento 0.1** (help, find, clipboard, session, …) |
+| P4 | **polimento 0.2** (help, find, clipboard, session, i18n, …) |
 
 Markdown futuro (preview, fence injections, MDX JSX): `docs/markdown.md` — **não** misturar no P3/P4.

@@ -4,15 +4,15 @@
 
 O projeto é estruturado em três planos concêntricos:
 
-1. **Plano de Domínio**: Entidades essenciais, regras de negócio e validações puras.
-2. **Plano de Aplicação**: Casos de uso, orquestração de operações e fluxos de tarefas.
-3. **Plano de Adaptadores e Infraestrutura**: Drivers de persistência, conectores externos, interfaces de CLI e mensageria.
+1. **Plano de Domínio**: Regras essenciais do editor, modelos de buffer em memória (Ropey) e validações puras sem dependência de terminal.
+2. **Plano de Aplicação**: Casos de uso, orquestração de operações, loop de eventos e gerenciamento de tarefas/sessão.
+3. **Plano de Adaptadores e Infraestrutura**: Drivers PTY (portable-pty), conectores de sistema de arquivos, integração Git CLI, clientes stdio de LSP e interface TUI via Ratatui/Crossterm.
 
 ## Diagrama Conceitual
 
 ```mermaid
 graph TD
-    UI[Interfaces / CLI / Web] --> App[Plano de Aplicação]
-    Infra[Bancos de Dados / Serviços] --> App
-    App --> Domain[Plano de Domínio e Contratos]
+    UI[Terminal UI / Crossterm / Ratatui] --> App[Plano de Aplicação e Orquestração]
+    Infra[Sistema de Arquivos / Git CLI / PTY / LSP] --> App
+    App --> Domain[Plano de Domínio e Core Headless]
 ```

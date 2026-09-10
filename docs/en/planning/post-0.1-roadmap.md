@@ -2,7 +2,7 @@
 
 > **Superseded.** The current normative plan is  
 > **[`alpha6-roadmap.md`](alpha6-roadmap.md)**  
-> (Release **`0.1.0-alpha.6`**, supported languages, Markdown links/terminal graphics, anti-bloat).
+> (defined in `0.1.0-alpha.6` and consolidated in release **`0.2.0`**, supported languages, Markdown links/terminal graphics, anti-bloat).
 
 This document is preserved for historical context regarding design decisions across milestones P5–P9:
 
