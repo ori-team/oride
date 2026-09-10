@@ -10,7 +10,7 @@ Welcome to the official roadmap for **Oride**, tracking our journey from the ini
 
 - [x] **`v0.1.0` — Contained Mini-IDE Baseline:** Rope buffers, project tree, embedded PTY, search, Git status, Markdown preview, on-demand LSP, splits.
 - [x] **`v0.2.0` — First-Class Languages & Media:** 13 languages, terminal graphics protocols (Kitty/Sixel/iTerm2), Git sync & staging, session restore, Vim modal mode, task runner (`tasks.toml`), diagnostics (`:health`), dynamic i18n, universal installers.
-- [ ] **`v0.3.0` — Extensibility & Editing Ergonomics:** Lua plugin engine (`mlua`), smart delimiter auto-pairing, modal text objects, PTY scrollback history, LSP symbol outline.
+- [ ] **`v0.3.0` — Extensibility & Editing Ergonomics:** Lua plugin engine (`mlua`), smart delimiter auto-pairing, modal text objects, PTY scrollback history, LSP symbol outline, self-update CLI command (`oride --update`).
 - [ ] **`v0.4.0` — Extreme Performance & Large Files:** Large file streaming mode (>100MB), zero-copy viewport rendering, lazy grammar initialization (<5ms boot), interactive Git hunk staging.
 - [ ] **`v0.5.0` — Code Intelligence & Refactoring:** LSP code actions / quickfixes (`Alt+Enter`), semantic symbol renaming (`F2`), tabstop snippets, diagnostics navigation.
 - [ ] **`v0.6.0` — Large-Scale Fuzzy Matching & Sessions:** High-performance multi-threaded fuzzy matcher (100k+ files), crash recovery swap sessions, historical jump list.

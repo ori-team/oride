@@ -51,6 +51,7 @@
 - [ ] **Text Objects no Modo Modal:** Comandos de ação por escopo estilo Vim (`ci"`, `da(`, `yiw`, `vi{`).
 - [ ] **Scrollback Navegável no PTY:** Buffer circular de histórico de saída do terminal embutido com rolagem por teclado e mouse.
 - [ ] **Outline de Símbolos do Buffer via LSP:** Seletor de funções, tipos e variáveis do documento atual (`Ctrl+Shift+O`).
+- [ ] **Comando de Auto-Update (`oride --update` / `:update`):** Verificação automatizada de releases no GitHub e atualização in-place do executável para instalações realizadas via instalador universal ou release do GitHub.
 
 ### [ ] `v0.4.0` — Performance Extrema & Gestão de Arquivos Grandes
 - [ ] **Large File Mode (> 10MB / > 100MB):** Detecção preventiva de arquivos pesados com fallback automático para visualização em streaming via chunks do Ropey, desativando Tree-Sitter e wrap de linhas para evitar congelamento da UI.

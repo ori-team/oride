@@ -145,7 +145,7 @@ Oride follows a strict **lean, contained, and fail-closed** philosophy with an u
 
 ### Upcoming Slices (Road to `v1.0.0`)
 
-- [ ] **`v0.3.0` — Extensibility & Editing Ergonomics:** Lua plugin engine (`mlua`), smart delimiter auto-pairing, modal text objects (`ci"`, `da(`), PTY scrollback history, and LSP symbol outline (`Ctrl+Shift+O`).
+- [ ] **`v0.3.0` — Extensibility & Editing Ergonomics:** Lua plugin engine (`mlua`), smart delimiter auto-pairing, modal text objects (`ci"`, `da(`), PTY scrollback history, LSP symbol outline (`Ctrl+Shift+O`), and self-update CLI command (`oride --update`).
 - [ ] **`v0.4.0` — Extreme Performance & Large Files:** Large file streaming mode (>100MB without UI freeze), zero-copy viewport rendering, lazy grammar initialization (<5ms boot), and interactive Git hunk staging.
 - [ ] **`v0.5.0` — Code Intelligence & Refactoring:** LSP code actions / quickfixes (`Alt+Enter`), project-wide symbol renaming (`F2`), tabstop snippets, and direct diagnostics navigation.
 - [ ] **`v0.6.0` — Large-Scale Fuzzy Matching & Resilient Sessions:** High-performance fuzzy matching engine (100k+ files), crash recovery swap sessions, and persistent jump list.

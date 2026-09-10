@@ -144,7 +144,7 @@ O Oride segue uma filosofia rígida de **editor contido, enxuto e resiliente (fa
 
 ### Próximos Slices (Rumo à `v1.0.0`)
 
-- [ ] **`v0.3.0` — Extensibilidade & Ergonomia de Edição:** Motor de plugins em Lua (`mlua`), auto-pairing de delimitadores, text objects modais (`ci"`, `da(`), histórico de scrollback no PTY e outline de símbolos LSP (`Ctrl+Shift+O`).
+- [ ] **`v0.3.0` — Extensibilidade & Ergonomia de Edição:** Motor de plugins em Lua (`mlua`), auto-pairing de delimitadores, text objects modais (`ci"`, `da(`), histórico de scrollback no PTY, outline de símbolos LSP (`Ctrl+Shift+O`) e comando de auto-update (`oride --update`).
 - [ ] **`v0.4.0` — Performance Extrema & Arquivos Grandes:** Modo para arquivos gigantes (>100MB em streaming sem travar a UI), renderização zero-copy do viewport, lazy loading de gramáticas (<5ms boot) e staging interativo de hunks no Git.
 - [ ] **`v0.5.0` — Inteligência de Código & Refatoração:** LSP code actions / quickfix (`Alt+Enter`), renomeação de símbolos no projeto (`F2`), snippets com tabstops e navegação direta de diagnósticos.
 - [ ] **`v0.6.0` — Busca Fuzzy em Larga Escala & Sessões:** Motor de busca fuzzy multi-thread (100k+ arquivos), recuperação de sessão via swap e histórico persistente de jump list.

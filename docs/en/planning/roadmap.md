@@ -51,6 +51,7 @@
 - [ ] **Modal Text Objects:** Scoped Vim-style motions and text objects (`ci"`, `da(`, `yiw`, `vi{`).
 - [ ] **PTY Scrollback History:** Circular history buffer for the embedded terminal panel with keyboard and mouse scrolling.
 - [ ] **LSP Buffer Symbol Outline:** Outline picker for functions, types, and variables in the active document (`Ctrl+Shift+O`).
+- [ ] **Self-Update Command (`oride --update` / `:update`):** Automated check against GitHub Releases and in-place binary upgrade when installed via the universal installer or GitHub.
 
 ### [ ] `v0.4.0` — Extreme Performance & Large File Management
 - [ ] **Large File Mode (> 10MB / > 100MB):** Automatic detection of oversized files with fallback to Ropey chunked streaming view, bypassing heavy Tree-Sitter and soft word wrapping to prevent UI stutter.
