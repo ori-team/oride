@@ -144,6 +144,7 @@ Oride follows a strict **lean, contained, and fail-closed** philosophy. The next
 - [ ] **LSP Code Navigation:** Symbol outline / breadcrumbs picker and basic snippet expansion.
 - [ ] **PTY Scrollback History:** Navigable scrollback buffer for the embedded terminal panel.
 - [ ] **Tree-Sitter Expansion:** Streamlined pluggable grammar bindings for additional systems and scripting languages.
+- [ ] **Lua Plugin Engine (`mlua`):** Scriptable extension system allowing users to write custom commands, buffer transformations, and event hooks (`on_open`, `on_save`) via embedded Lua scripts.
 
 > For detailed technical specifications, architectural DAGs, and out-of-scope boundaries, check out the [Roadmap Specification](docs/en/planning/alpha6-roadmap.md).
 

@@ -143,6 +143,7 @@ O Oride segue uma filosofia rígida de **editor contido, enxuto e resiliente (fa
 - [ ] **Navegação de Código via LSP:** Seletor de símbolos/outline e expansão leve de snippets.
 - [ ] **Histórico de Scrollback no PTY:** Buffer navegável para rolar saídas longas no terminal embutido.
 - [ ] **Expansão de Gramáticas Tree-Sitter:** Mecanismo modular simplificado para inclusão de novas linguagens.
+- [ ] **Motor de Plugins em Lua (`mlua`):** Sistema de extensão programável permitindo comandos customizados, manipulação de buffers e ganchos de eventos (`on_open`, `on_save`) via scripts Lua embutidos.
 
 > Para especificações técnicas detalhadas, DAGs de implementação e o que está fora de escopo, consulte o [Plano de Roadmap](docs/planning/alpha6-roadmap.md).
 
