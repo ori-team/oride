@@ -16,6 +16,14 @@ REPO="ori-team/oride"
 DEFAULT_VERSION="v0.2.0"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 NO_PATH_MOD="${NO_PATH_MOD:-0}"
+TMP_DIR=""
+
+cleanup() {
+    if [ -n "${TMP_DIR:-}" ] && [ -d "${TMP_DIR:-}" ]; then
+        rm -rf "$TMP_DIR"
+    fi
+}
+trap cleanup EXIT
 
 # Colors for terminal output
 BOLD="\033[1m"
@@ -166,17 +174,15 @@ main() {
     local tarball="oride-${version}-${target}.tar.gz"
     local url="https://github.com/${REPO}/releases/download/${version}/${tarball}"
 
-    local tmp_dir
-    tmp_dir=$(mktemp -d)
-    trap 'rm -rf "$tmp_dir"' EXIT
+    TMP_DIR=$(mktemp -d)
 
     log_info "Downloading $tarball from GitHub Releases..."
-    if curl -fsSL "$url" -o "$tmp_dir/$tarball"; then
+    if curl -fsSL "$url" -o "$TMP_DIR/$tarball"; then
         log_info "Extracting archive..."
-        tar -xzf "$tmp_dir/$tarball" -C "$tmp_dir"
+        tar -xzf "$TMP_DIR/$tarball" -C "$TMP_DIR"
         
         mkdir -p "$INSTALL_DIR"
-        install -m 755 "$tmp_dir/oride" "$INSTALL_DIR/oride"
+        install -m 755 "$TMP_DIR/oride" "$INSTALL_DIR/oride"
     else
         log_warn "Precompiled release binary not found at $url"
         
