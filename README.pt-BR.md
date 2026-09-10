@@ -8,6 +8,8 @@ Status: **`0.2.0`** — mini-IDE TUI contida (editor, árvore de arquivos, termi
 Repositório: [ori-team/oride](https://github.com/ori-team/oride).  
 Documentação: [Manual do Usuário](docs/guides/pt/guia-de-uso.md) · [Design](docs/design.md) · [Configuração](docs/guides/pt/config.md) · [Temas](docs/guides/pt/themes.md) · [Roadmap](docs/planning/alpha6-roadmap.md).
 
+![Interface do Oride](assets/oride-interface.png)
+
 ## Objetivos (Produto Contido)
 
 - **Tudo no TUI:** Sem dependência de browser externo para edição, sem inchaço (anti-bloat), sem macros complexas e sem scripts lentos.

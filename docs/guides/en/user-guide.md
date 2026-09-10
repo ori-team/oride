@@ -38,6 +38,8 @@ oride --version
 
 ## 2. Interface Layout
 
+![Oride Interface](../../assets/oride-interface.png)
+
 Oride's user interface is crafted for optimal terminal ergonomics using the Ratatui library:
 
 - **Top Menu Bar:** Accessible via standard mnemonics: `Alt+F` (File), `Alt+E` (Edit), `Alt+V` (View), `Alt+G` (Go), `Alt+I` (Git), and `Alt+H` (Help).

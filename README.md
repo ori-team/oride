@@ -8,6 +8,8 @@ Status: **`0.2.0`** — self-contained TUI mini-IDE (editor, project file tree, 
 Repository: [ori-team/oride](https://github.com/ori-team/oride).  
 Documentation: [User Guide](docs/guides/en/user-guide.md) · [Architecture & Design](docs/en/design.md) · [Configuration](docs/guides/en/config.md) · [Themes](docs/guides/en/themes.md) · [Roadmap](docs/en/planning/alpha6-roadmap.md).
 
+![Oride Interface](assets/oride-interface.png)
+
 ## Goals (Lean & Contained Product)
 
 - **Everything in the TUI:** Zero browser preview dependency, no slow scripting bloat, no heavy macro engines.

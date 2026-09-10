@@ -38,6 +38,8 @@ oride --version
 
 ## 2. Layout da Interface
 
+![Interface do Oride](../../assets/oride-interface.png)
+
 A interface do Oride foi desenhada para eficiência máxima no terminal, aproveitando a biblioteca Ratatui:
 
 - **Barra Superior de Menus:** Acessível via teclas `Alt+F` (File), `Alt+E` (Edit), `Alt+V` (View), `Alt+G` (Go), `Alt+I` (Git) e `Alt+H` (Help).
