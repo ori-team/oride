@@ -73,14 +73,17 @@ cargo test -p oride-keymap
 - `shell` (vazio = `$SHELL`), `default_height`
 
 ### `[lsp]`
-- `enabled`, `oriscript_command` (compatibilidade), `timeout_ms`
-- `[lsp.servers]`: mapa `LanguageId → argv`; os processos são iniciados sob
-  demanda. OriScript usa `oriscript lsp` e Ori usa `ori-lsp` por default.
+- `enabled`, `timeout_ms`
+- `[lsp.servers]`: mapa `LanguageId → argv`; os servidores são iniciados sob
+  demanda. Por padrão, Ori utiliza `ori-lsp`. Servidores comuns como `rust-analyzer` e `clangd` podem ser configurados livremente.
+- `oriscript_command`: mantido apenas para retrocompatibilidade com configurações antigas.
 
 ```toml
 [lsp.servers]
 rust = ["rust-analyzer"]
-python = ["pylsp"]
+c = ["clangd"]
+bash = ["bash-language-server", "start"]
+ori = ["ori-lsp"]
 ```
 
 ### `[syntax]`

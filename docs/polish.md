@@ -20,11 +20,11 @@ Histórico de polish. Roadmap atual: [`planning/alpha6-roadmap.md`](planning/alp
 | CI + install | `.github/workflows/ci.yml` · `scripts/install.sh` |
 | Session | workspace + tabs |
 
-### P3 (LSP OriScript)
+### P3 (LSP Engine & System Tooling)
 
 | Feature | Atalho |
 |---------|--------|
-| Spawn `oriscript lsp` | `[lsp]` config |
+| Spawn LSP servers | `[lsp.servers]` config |
 | Diagnostics panel | `Ctrl+Shift+M` |
 | Completion | automático local + `Ctrl+Space` para LSP/fallback |
 | Hover | `Ctrl+K` |

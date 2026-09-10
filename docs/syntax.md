@@ -8,11 +8,11 @@ Oride usa **tree-sitter** (e pipeline MD próprio) para colorir o buffer ativo.
 
 | LanguageId | Extensões | Grammar / motor | Estado |
 |------------|-----------|-----------------|------------------|
-| `oriscript` | `.oris` | `tree-sitter-oriscript` (estático vendored) | **nativo estático** |
 | `rust` | `.rs` | `tree-sitter-rust` (estático) | **nativo estático** |
 | `c` | `.c`, `.h` | `tree-sitter-c` (estático) | **nativo estático** |
 | `bash` | `.sh`, `.bash`, `.zsh` | `tree-sitter-bash` (estático) | **nativo estático** |
 | `markdown` | `.md`, … | `tree-sitter-md` + inject (estático) | **nativo estático** |
+| `ori` / ori-lang | `.orl` | fallback léxico contido | **lexical** |
 | `python` | `.py`, `.pyw` | dinâmico (`.so` / plugin) + fallback léxico | **plugin / fallback** |
 | `javascript` | `.js`, `.mjs`, `.cjs` | dinâmico (`.so` / plugin) + fallback léxico | **plugin / fallback** |
 | `typescript` | `.ts` | dinâmico (`.so` / plugin) + fallback léxico | **plugin / fallback** |
@@ -20,10 +20,10 @@ Oride usa **tree-sitter** (e pipeline MD próprio) para colorir o buffer ativo.
 | `ruby` | `.rb`, `.rake`, … | dinâmico (`.so` / plugin) + fallback léxico | **plugin / fallback** |
 | `html` | `.html`, `.htm` | dinâmico (`.so` / plugin) + fallback léxico | **plugin / fallback** |
 | `css` | `.css` | dinâmico (`.so` / plugin) + fallback léxico | **plugin / fallback** |
-| `ori` / ori-lang | `.orl` | fallback léxico contido | **lexical** |
 | `nim` | `.nim`, … | fallback léxico contido | **lexical** |
 | `d` | `.d`, `.di` | fallback léxico contido | **lexical** |
 | `lua` | `.lua` | fallback léxico contido | **lexical** |
+| `oriscript` | `.oris` | `tree-sitter-oriscript` (estático legado) | **legado/estático** |
 | `plain` | outras | — | sem highlight |
 
 A linguagem ativa aparece na status line. Gramáticas dinâmicas são carregadas de `~/.config/oride/grammars/`, `.oride/grammars/` ou plugins instalados.
@@ -41,7 +41,7 @@ Aliases disponíveis incluem `oris`/`oriscript`, `rust`/`rs`, `c`/`h`, `bash`/`s
 ## Crates
 
 - `oride-syntax` — engine + kinds + detecção + MD preview lines
-- `tree-sitter-oriscript` — binding da grammar OriScript
+- `tree-sitter-oriscript` — binding da grammar legada OriScript (compatibilidade)
 - grammars externas via crates `tree-sitter-*`
 
 ## Limitações

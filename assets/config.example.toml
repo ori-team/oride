@@ -102,13 +102,15 @@ default_height = 10
 
 [lsp]
 enabled = true
-oriscript_command = ["oriscript", "lsp"]
+# oriscript_command = ["oriscript", "lsp"] # mantido para retrocompatibilidade
 timeout_ms = 10000
 
-# Overrides/servers adicionais, iniciados sob demanda ao abrir a linguagem.
+# Servidores LSP configuráveis, iniciados sob demanda ao abrir o arquivo da linguagem.
 [lsp.servers]
-# ori = ["ori-lsp"] # já é o default do provider
 # rust = ["rust-analyzer"]
+# c = ["clangd"]
+# bash = ["bash-language-server", "start"]
+# ori = ["ori-lsp"]
 # python = ["pylsp"]
 
 [syntax]

@@ -28,7 +28,7 @@
 - Undo tree ramificado visual  
 - Telescope multi-source monstro  
 - DAP/debugger, collab, cloud  
-- Inlay hints densos (salvo se LSP OriScript entregar e for 1 toggle simples)  
+- Inlay hints densos  
 - Replace-in-project “IDE monstro” (só se caber em fatia mínima depois de languages)
 
 ---
@@ -45,7 +45,7 @@ Congela e documenta o estado **já no tree** sob a versão **0.1.0-alpha.6**:
 | Find | buffer (case/accent/word/regex) + project (`rg`/fallback) |
 | Git | status tree, SCM panel, blame status, diff read-only |
 | MD | highlight + fence inject + preview TUI + image **placeholder** |
-| LSP | OriScript (diagnostics, complete, hover, goto, format) |
+| LSP | Multi-LSP sob demanda (diagnostics, complete, hover, goto, format) |
 | Layout | menu, banner, splits (2), multi-cursor, mouse **opt-in** (`mouse=false`) |
 | UX | which-key, welcome, buffer picker, jump list, multi-picker MVP, surround MVP |
 | Plugins | built-in `LanguageProvider` + 2 commands (sem host externo) |
@@ -60,17 +60,19 @@ Ordem de maturidade por linguagem: **detect → highlight → comment/indent →
 
 | ID | Extensões típicas | Highlight | LanguageProvider | LSP no Oride |
 |----|-------------------|-----------|------------------|--------------|
-| **OriScript** | `.oris` | tree-sitter (já) | já | `oriscript lsp` (já) |
-| **Ori (ori-lang)** | `.orl` | fallback léxico contido (grammar estável indisponível) | sim | se CLI/LSP existir no PATH; senão skip |
+| **Rust** | `.rs` | tree-sitter-rust | sim | `rust-analyzer` sob demanda |
+| **C** | `.c`, `.h` | tree-sitter-c | sim | `clangd` sob demanda |
+| **Bash** | `.sh`, `.bash` | tree-sitter-bash | sim | `bash-language-server` sob demanda |
+| **Ori (ori-lang)** | `.orl` | fallback léxico contido | sim | `ori-lsp` sob demanda |
 | **Markdown** | `.md`, … | já (+ inject) | já | não |
 | **HTML** | `.html`, `.htm` | já | já | não no alpha |
 | **CSS** | `.css` | já | já | não no alpha |
 | **JavaScript** | `.js`, `.mjs`, `.cjs`, `.jsx` | já | já | não no alpha |
-| **TypeScript** | `.ts`, `.tsx` | tree-sitter-typescript/TSX | sim | opcional `typescript-language-server` depois |
-| **Rust** | `.rs` | tree-sitter-rust | sim | opcional `rust-analyzer` depois |
-| **Python** | `.py` | tree-sitter-python | sim | opcional `pylsp`/`pyright` depois |
-| **Nim** | `.nim` | fallback léxico contido (sem crate estável) | sim | opcional |
+| **TypeScript** | `.ts`, `.tsx` | tree-sitter-typescript/TSX | sim | opcional `typescript-language-server` |
+| **Python** | `.py` | tree-sitter-python | sim | opcional `pylsp`/`pyright` |
+| **Nim** | `.nim` | fallback léxico contido | sim | opcional |
 | **Ruby** | `.rb` | tree-sitter-ruby | sim | opcional |
+| **OriScript** | `.oris` | tree-sitter (legado) | já | legado (`oriscript lsp`) |
 
 **Regra de contensão:** no ciclo alpha.6→0.2 só **highlight + provider + fence inject**. Multi-LSP genérico = fatia própria (L2), não bloqueia languages.
 
@@ -140,7 +142,7 @@ Rust → Python → TypeScript → Ruby → Nim → Ori-lang (grammar do monorep
 
 | ID | Entrega | Gate |
 |----|---------|------|
-| **L2.1** | ✅ Config `[lsp.servers]` map lang → argv (defaults OriScript + Ori + L1) | TOML |
+| **L2.1** | ✅ Config `[lsp.servers]` map lang → argv (Rust + C + Bash + Ori + L1) | TOML |
 | **L2.2** | ✅ N clients preguiçosos por linguagem aberta | sem crash se offline |
 | **L2.3** | ✅ Unificação completa: completion + sync + matriz diagnostics/hover/goto/format | smoke Ori completion |
 | **L2.4** | ✅ Não obrigar servidores externos no CI (skip se binário ausente com fail-closed) | skip se binário ausente |

@@ -10,4 +10,4 @@
 3. **Pull Requests & Merge**:
    - Todo código entra em `main` via PR.
    - Estratégia de merge: `squash` com branch de trabalho deletada após o merge.
-   - Quality gates do CI (`gofmt`, `govet`, `gotest -race`) devem passar 100%.
+   - Quality gates do CI (`cargo fmt`, `cargo clippy`, `cargo test --workspace`) devem passar 100%.

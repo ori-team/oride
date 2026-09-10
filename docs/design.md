@@ -1,27 +1,31 @@
-# Plano: TUI code editor “IDE mini” (estilo Micro) para OriScript
+# Arquitetura e Design: TUI Code Editor & Mini-IDE em Rust
 
 ## Context
 
-Queremos um **editor de código em terminal (TUI)**, inspirado no [Micro](https://micro-editor.github.io/), focado em **OriScript**, mas extensível a outras linguagens via highlight / completions / suggestions (plugins). Diferente do Micro “puro”, o produto inclui:
+Queremos um **editor de código em terminal (TUI)** modular, rápido e extensível, inspirado na ergonomia do [Micro](https://micro-editor.github.io/) e [Helix], concebido em **Rust** com foco em linguagens de desenvolvimento de sistemas (Rust, C, Bash/Shell), documentação rica (Markdown) e ecossistema Ori (`ori-lang`), além de extensibilidade para linguagens modernas via highlight Tree-Sitter, task runner e LSP.
 
-- Árvore de projeto navegável (criar pastas/subpastas/arquivos)
-- Terminal embutido colapsável/expansível por atalho
-- Suporte nativo a **Markdown, HTML, CSS, JS** (+ **OriScript** como linguagem de primeira classe)
-- Configuração de atalhos, tema e linguagem via arquivo de config
-- Ícones de arquivo/pasta (Nerd Fonts no TUI)
-- Arquitetura **modular em Rust** (crates + traits) para features e plugins
+Diferente de editores puramente textuais simples, o **Oride** inclui:
 
-**Decisões já tomadas:**
+- Árvore de projeto navegável (criar pastas/subpastas/arquivos, badges git)
+- Terminal embutido colapsável/expansível por atalho (`portable-pty`)
+- Suporte nativo a **Rust, C, Bash, Markdown e Ori** (+ plugins e gramáticas dinâmicas)
+- Modos de edição híbridos: edição padrão intuitiva e modo modal estilo Vim (`:normal`, `i`, `v`, `V`, `:`)
+- Task runner declarativo via `tasks.toml` e sistema preventivo de diagnóstico (`:health`)
+- Configuração de atalhos, temas TOML e internacionalização dinâmica
+- Ícones Nerd Fonts com fallback limpo
+- Arquitetura **modular em Rust** (crates + traits desacopladas)
+
+**Decisões de Design:**
 
 | Decisão | Escolha |
 |----------|---------|
-| Superfície | **TUI** (Ratatui / estilo Micro–Helix) |
-| Local | **Repo/workspace separado** do OriScript |
-| Escopo 0.1 | **“IDE mini” completa** (multi-tab, find/replace, git na árvore, LSP OriScript, temas, keymaps, command palette) |
+| Superfície | **TUI** (Ratatui + Crossterm) |
+| Arquitetura | **Workspace Cargo modular** com separação estrita entre core e UI |
+| Escopo | **“IDE mini” completa** (multi-tab, splits, terminal PTY, git status, multi-LSP sob demanda, temas, keymaps, task runner, palette) |
 
-**Por que repo separado:** o monorepo OriScript já é compiler + VM + LSP + extensions VS Code/Zed. O editor é um produto com ciclo de release, deps e UX próprios. Integração com OriScript via **PATH + `oriscript lsp`** (CLI first, alinhado a `docs/planning/tooling-ecosystem-plan.md` e `lsp-mvp-design.md`).
+**Desacoplamento de Linguagens:** toda inteligência avançada de linguagem (diagnostics, completion, hover, goto, format) opera via clientes stdio de **LSP no PATH** (`rust-analyzer`, `clangd`, `ori-lsp`), sem embutir compiladores pesados dentro do binário do editor.
 
-**Nome de trabalho:** `oride` (Ori + IDE). Pode ser renomeado antes do primeiro commit (`oriedit`, `spark`, etc.).
+**Nome do projeto:** `oride` (Ori + IDE). Repositório oficial: `https://github.com/ori-team/oride`.
 
 ---
 
@@ -31,11 +35,11 @@ Queremos um **editor de código em terminal (TUI)**, inspirado no [Micro](https:
 |--------|-------------------|---------|
 | UI | `ratatui` + `crossterm` | Padrão TUI Rust 2024–26 |
 | Buffer de texto | `ropey` | Rope eficiente, undo-friendly |
-| Highlight | `tree-sitter` + grammars embutidas | Incremental; `.oris` já tem grammar em `editors/zed-oriscript/tree-sitter-oriscript` |
+| Highlight | `tree-sitter` + grammars embutidas | Incremental, AST preciso (Rust, C, Bash, MD, etc.) |
 | Terminal embutido | `portable-pty` + parser VTE (`vte`) | PTY real + shell interativo |
 | Config | **TOML** (`serde` + `toml`) | Comentários, legível, ecossistema Rust; JSON só se export/import for necessário |
 | Keymap | crate próprio + TOML | Camadas: defaults → user → buffer-local |
-| LSP client | JSON-RPC stdio (sem tower no host se possível) | Consome `oriscript lsp` e futuros servers |
+| LSP client | JSON-RPC stdio (sem tower no host se possível) | Consome `rust-analyzer`, `clangd`, `ori-lsp` e outros servers |
 | Git | `git2` **ou** subprocess `git status --porcelain` | Status na árvore; porcelain é mais simples e estável no MVP |
 | Fuzzy / palette | `nucleo` ou `fuzzy-matcher` | Command palette + file finder |
 | Watch FS | `notify` | Reload / refresh da árvore |
@@ -73,7 +77,7 @@ oride/                          # novo repositório
     oride-app/                  # composition, event loop, layout
     oride/                      # binário CLI: `oride [path]`
   plugins/                      # built-ins (crates, feature = "builtin")
-    lang-oriscript/
+    lang-rust/
     lang-markdown/
     lang-web/                   # html, css, js
   assets/
@@ -91,7 +95,7 @@ oride/                          # novo repositório
 3. **LanguageProvider trait** — highlight, indents, comment string, LSP command, completions “offline”.
 4. **Plugin host** no 0.1 = **crates Rust built-in** + trait; **API externa (Lua/WASM)** no 0.2+ (sem travar ABI nativo frágil).
 5. **Fail closed** — LSP/Git/PTY com falha viram status line, não crash.
-6. **CLI first com OriScript** — inteligência de `.oris` via `oriscript lsp` no PATH; sem reimplementar checker.
+6. **CLI first via PATH** — inteligência de linguagens via binários padrão no PATH (e.g. `rust-analyzer`, `clangd`, `ori-lsp`), sem embutir compiladores pesados.
 
 ### Fluxo de eventos (alto nível)
 
@@ -130,15 +134,15 @@ Layout padrão:
 | 2 | Árvore de projeto | Expand/collapse, keyboard + mouse se disponível |
 | 3 | Criar pasta/arquivo | Dialog inline ou prompt na status; validar path |
 | 4 | Terminal embutido | Toggle atalho; resize altura; focus cycle |
-| 5 | Highlight nativo | `.oris`, `.md`, `.html`, `.css`, `.js` via tree-sitter |
-| 6 | Completions / suggestions | LSP OriScript + keywords offline por linguagem |
+| 5 | Highlight nativo | Rust, C, Bash, Markdown, Ori (+ gramáticas dinâmicas) |
+| 6 | Completions / suggestions | LSP semântico + keywords offline por linguagem |
 | 7 | Config TOML | theme, language, keys, terminal shell, tree width |
 | 8 | Ícones | `icons.toml` + Nerd Font; fallback |
 | 9 | Temas | cores UI + scopes syntax |
 | 10 | Keymaps custom | rebind de Actions; layers |
 | 11 | Find/replace | buffer atual; regex opcional |
 | 12 | Git status na árvore | M/A/D/? cores no nome |
-| 13 | LSP OriScript | spawna `oriscript lsp` se `oris.proj` ou `.oris` |
+| 13 | Multi-LSP sob demanda | spawna servidores sob demanda (`[lsp.servers]`) |
 | 14 | Command palette | fuzzy de Actions + “open file” |
 
 ---
@@ -177,10 +181,10 @@ Prioridade para caber no 0.1 “IDE mini” sem virar monólito:
 | **Code-fence language highlight** | Injections em ` ```lang ` | 
 | **MDX com JSX real** | Além do highlight MD genérico |
 | **Git gutter** (linha) + stage hunk | Além do ícone na árvore |
-| **Format on save** | Via LSP `formatting` (já no OriScript) |
+| **Format on save** | Via LSP `formatting` |
 | **Rename / new file from tree context** | UX árvore completa |
 | **Plugins externos (Lua ou WASM)** | Extensibilidade real sem recompilar |
-| **DAP / debugger** | Só depois de stack traces OriScript estáveis |
+| **DAP / debugger** | Futuro (desacoplado) |
 | **Detecção automática de Nerd Font** | Mensagem amigável no first-run |
 
 ### Explicitamente **fora** do 0.1
@@ -196,11 +200,11 @@ Prioridade para caber no 0.1 “IDE mini” sem virar monólito:
 ```rust
 // oride-plugin (conceitual)
 pub trait LanguageProvider: Send + Sync {
-    fn id(&self) -> &str;                    // "oriscript"
-    fn extensions(&self) -> &[&str];         // [".oris"]
+    fn id(&self) -> &str;                    // "rust"
+    fn extensions(&self) -> &[&str];         // [".rs"]
     fn highlight_query(&self) -> Option<&str>;
     fn comment_token(&self) -> Option<&str>; // "//"
-    fn lsp_command(&self) -> Option<LspSpawn>; // ["oriscript", "lsp"]
+    fn lsp_command(&self) -> Option<LspSpawn>; // ["rust-analyzer"]
     fn offline_completions(&self, ctx: &CompletionCtx) -> Vec<CompletionItem>;
 }
 
@@ -213,7 +217,7 @@ pub trait Plugin: Send + Sync {
 
 Registro estático no binário (ou `inventory` / explicit `register` em `main`):
 
-- `lang-oriscript` — grammar + LSP `oriscript lsp`
+- Providers nativos para Rust, C, Bash, Markdown, Ori, etc.
 - `lang-markdown`, `lang-web` — highlight + indent; sem LSP no 0.1 (opcional `vscode-html` etc. depois)
 
 ### 0.2+ — Host externo
@@ -255,9 +259,9 @@ width = 28
 show_hidden = false
 git_status = true
 
-[lsp]
-oriscript_command = ["oriscript", "lsp"]
-# timeout_ms = 10000
+[lsp.servers]
+rust = ["rust-analyzer"]
+c = ["clangd"]
 
 [keys]
 "ctrl+s" = "save"
@@ -279,16 +283,16 @@ Projeto local: `.oride/config.toml` sobrescreve user (merge profundo de seções
 
 ---
 
-## Integração OriScript
+## Integração LSP & Ferramentas de Sistema
 
 | Capacidade | Fonte |
 |------------|--------|
-| Diagnostics / hover / goto / completion / format | clients stdio preguiçosos por linguagem; defaults `oriscript lsp` e `ori-lsp` |
-| Detectar projeto | `oris.proj` na raiz aberta ou ancestral |
-| Grammar highlight | copiar/adaptar `tree-sitter-oriscript` do monorepo (submodule ou crate path opcional) |
-| Run | Action `run_project` → `oriscript run` no terminal embutido ou job buffer |
+| Diagnostics / hover / goto / completion / format | Clients stdio preguiçosos por linguagem (`[lsp.servers]`) |
+| Servidores recomendados | `rust-analyzer` (Rust), `clangd` (C/C++), `bash-language-server` (Bash), `ori-lsp` (Ori) |
+| Grammar highlight | Tree-sitter estático + fallback léxico para novas linguagens |
+| Run / Tasks | Task Runner declarativo (`tasks.toml`) e Terminal PTY integrado |
 
-O editor **não** linka `oris-*` no 0.1 (evita acoplar releases). Opcional depois: crate `oris-lsp-types` se compartilharmos tipos.
+O editor **não** linka compiladores estáticos em seu binário, garantindo leveza extrema, portabilidade e ciclos de vida independentes.
 
 ---
 
@@ -319,7 +323,7 @@ Cada PR = um conceito; ordem topologicamente segura.
 | ID | Entrega | Gate |
 |----|---------|------|
 | **P2.1** | `oride-syntax` tree-sitter + MD/HTML/CSS/JS | highlight visual |
-| **P2.2** | Provider OriScript + grammar | `.oris` colorido |
+| **P2.2** | Provider de linguagens de sistema + grammar | Rust, C, Bash, Markdown |
 | **P2.3** | Comment toggle, indent, soft wrap md | edição confortável |
 | **P2.4** | Find/replace no buffer | regex opcional |
 
@@ -327,9 +331,9 @@ Cada PR = um conceito; ordem topologicamente segura.
 
 | ID | Entrega | Gate |
 |----|---------|------|
-| **P3.1** | `oride-lsp` client + diagnostics panel | `oriscript lsp` com fixture |
-| **P3.2** | Hover / completion / goto (UI) | projeto `.oris` de exemplo |
-| **P3.3** | Format (LSP) + format on save config | roundtrip `oriscript fmt` |
+| **P3.1** | `oride-lsp` client + diagnostics panel | LSP stdio desacoplado |
+| **P3.2** | Hover / completion / goto (UI) | projetos de exemplo |
+| **P3.3** | Format (LSP) + format on save config | formatação via LSP |
 
 ### Fase 4 — Polimento 0.1
 
@@ -373,7 +377,7 @@ Scaffold inicial só com `oride-core` + binário vazio/`hello buffer` — depois
 | Terminal embutido (PTY) complexo no TUI | Isolar crate cedo; fallback “abrir `$SHELL` externo” se PTY falhar |
 | Tree-sitter build / grammars | Vendor grammars + `cc` build; CI com cache |
 | Multi-cursor / splits atrasam 0.1 | Fora do escopo; API de Selection já lista de ranges se possível |
-| Acoplar ao monorepo OriScript | Só LSP/PATH; grammar copiada com NOTICE |
+| Acoplar a compiladores específicos | Só LSP via PATH; binário desacoplado |
 | Plugin ABI nativo | Não expor `cdylib` no 0.1; só traits internos |
 | Escopo “IDE mini” estourar | Cortes: multi-cursor, project search, preview md, rename tree → P1 |
 
@@ -384,11 +388,11 @@ Scaffold inicial só com `oride-core` + binário vazio/`hello buffer` — depois
 1. **Unit:** `oride-core` (insert/delete/undo), keymap resolve, config merge, tree create path.
 2. **Integração headless:** abrir buffer de fixture, apply actions sem TTY (`App::from_test`).
 3. **Manual TUI checklist:**
-   - Abrir pasta com `oris.proj` + `main.oris`
-   - Highlight `.oris` / `.md` / `.html`
+   - Abrir pasta com projeto de código
+   - Highlight `.rs` / `.c` / `.sh` / `.md` / `.html`
    - Criar subpasta e arquivo pela árvore
-   - Terminal: toggle, rodar `oriscript run`, colapsar
-   - Introduzir erro de tipo → diagnostic no painel
+   - Terminal: toggle, executar comandos, colapsar
+   - Introduzir erro de sintaxe/tipo → diagnostic no painel via LSP
    - Completion / hover / goto
    - Rebind tecla em `config.toml` e reiniciar (ou hot-reload se implementado)
    - Git: modificar arquivo → status `M` na árvore
@@ -397,24 +401,10 @@ Scaffold inicial só com `oride-core` + binário vazio/`hello buffer` — depois
 
 ---
 
-## Relação com este worktree
-
-Este worktree (`micro-like-editor`) é o **OriScript**. O editor **não** substitui este repo.
-
-Próximo passo de execução (após aprovação):
-
-1. Criar repositório/workspace **`oride`** (path a confirmar, ex. `~/Documentos/Projetos/oride` ou sibling de `projetos-ori-script`).
-2. Scaffold Fase 0 (workspace + `oride-core` + bin).
-3. Copiar/adaptar este plano para `oride/docs/design.md`.
-4. Opcional: link no README do OriScript (“Editor TUI oficial: oride”).
-
----
-
-## Resumo da recomendação
-
-- **TUI modular em Rust** com workspace de crates e **Actions** como lingua franca.
-- **TOML** para config/keymaps/themes.
-- **Tree-sitter + LSP** (não reinventar checker).
-- **Plugins 0.1 = LanguageProvider/Plugin em Rust**; externos no 0.2.
-- **0.1 “IDE mini”** = árvore + tabs + terminal + git tree + palette + find/replace + highlight nativo + LSP OriScript + temas/keys — **sem** multi-cursor, splits e marketplace.
-- **Extras prioritários:** palette, fuzzy open, diagnostics panel, undo, clipboard, help, editorconfig, session leve.
+## Resumo da Arquitetura
+ 
+- **TUI modular em Rust** com workspace de crates desacoplados e **Actions** como lingua franca.
+- **TOML** para config/keymaps/themes e tarefas (`tasks.toml`).
+- **Tree-sitter + LSP via PATH** para inteligência de linguagem eficiente e desacoplada.
+- **Task Runner e Diagnóstico Integrados** para experiência completa de desenvolvimento no terminal.
+- **Extensibilidade Dinâmica:** temas TOML sem recompilação, catálogos de tradução i18n externos e plugins modulares.
