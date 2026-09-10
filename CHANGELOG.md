@@ -5,6 +5,8 @@
 ### Added
 - **Project Atlas Framework v0.4.2:** Governança canônica do projeto via `atlas.json`, manifesto de orquestração e agentes em `.ai/`, rastreabilidade de estado em `PROJECT_STATE.md` e roteador em `ENTRYPOINT.md` e `docs/ATLAS.md`.
 - **Harness Google Antigravity:** Compilação nativa de regras e habilidades de workforce em `.agents/` via `atlas compile --target antigravity`.
+- **Diretrizes de Contribuição Bilíngues:** Adicionados `CONTRIBUTING.md` (Inglês) e `CONTRIBUTING.pt-BR.md` (Português) detalhando invariantes arquiteturais, TDD, quality gates e fluxo de Pull Requests.
+- **Estruturação de Guias de Usuário:** Centralização de todos os manuais sob `docs/guides/pt/` e `docs/guides/en/`, acompanhados de portais de índice.
 
 ## 0.2.0
 

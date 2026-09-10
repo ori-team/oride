@@ -17,6 +17,7 @@ It implements the **Living Canonical Documentation** principle: the repository i
 - 🗂️ [**User Guides Portal**](../guides/README.md) — Central portal for English (`guides/en/`) and Portuguese (`guides/pt/`) manuals.
 - 🏗️ [**Architecture & Design**](design.md) — Modular Rust design, crate boundaries, and technical stack decisions.
 - 🔌 [**Plugin API Specification**](plugin-api.md) — External plugin protocols, stdin/stdout JSON, and extension mechanisms.
+- 🤝 [**Contributing Guide**](../../CONTRIBUTING.md) — Core invariants, TDD workflow, style conventions, and PR requirements.
 
 ## Central Intent Router
 See [`ATLAS.md`](ATLAS.md) as the intent-guided entrypoint for developers, users, operators, and AI agents.

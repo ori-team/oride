@@ -16,6 +16,7 @@ Implementa o princípio de **Documentação Canônica Viva**: o repositório é 
 - 🎨 [**Guia de Desenvolvimento de Temas**](guides/pt/themes.md) — Especificação TOML e Live Preview de temas.
 - 🗂️ [**Portal de Guias do Usuário**](guides/README.md) — Central de manuais em Português (`guides/pt/`) e Inglês (`guides/en/`).
 - 🏗️ [**Arquitetura e Design**](design.md) — Topologia e decisões de engenharia.
+- 🤝 [**Como Contribuir**](../CONTRIBUTING.pt-BR.md) — Invariantes arquiteturais, TDD, estilo de código e pull requests.
 
 ## Roteador Central
 Consulte [`ATLAS.md`](ATLAS.md) como ponto de entrada para navegação guiada por intenção (usuário, desenvolvedor, operador, agente).

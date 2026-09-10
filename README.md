@@ -112,6 +112,10 @@ docs/
   design.md       # architecture & design
 ```
 
+## Contributing
+
+Contributions are warmly welcomed! Please see [CONTRIBUTING.md](CONTRIBUTING.md) ([Português](CONTRIBUTING.pt-BR.md)) for guidelines, invariants, and pull request requirements.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

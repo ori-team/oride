@@ -111,6 +111,10 @@ docs/
   design.md       # arquitetura do projeto
 ```
 
+## Contribuição
+
+Contribuições são muito bem-vindas! Consulte o arquivo [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md) ([English](CONTRIBUTING.md)) para conhecer os padrões de código, invariantes e fluxo de Pull Requests.
+
 ## Licença
 
 MIT — consulte [LICENSE](LICENSE).
