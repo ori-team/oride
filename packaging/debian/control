@@ -1,0 +1,12 @@
+Package: oride
+Version: 0.2.0
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: Ori Team <ori-lang@proton.me>
+Depends: libc6 (>= 2.31), libgcc-s1 (>= 4.2)
+Homepage: https://github.com/ori-team/oride
+Description: Fast, modular and extensible terminal code editor and mini-IDE in Rust
+ Oride is a contained terminal IDE written in Rust. It features Vim-style modal
+ editing, on-demand multi-LSP client, interactive PTY terminal, project tree,
+ Git integration, and rich Markdown preview directly in the terminal.

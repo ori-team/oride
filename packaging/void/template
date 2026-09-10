@@ -1,0 +1,17 @@
+# Template file for 'oride'
+pkgname=oride
+version=0.2.0
+revision=1
+build_style=cargo
+short_desc="Fast, modular and extensible terminal code editor and mini-IDE in Rust"
+maintainer="Ori Team <ori-lang@proton.me>"
+license="MIT"
+homepage="https://github.com/ori-team/oride"
+distfiles="https://github.com/ori-team/oride/archive/refs/tags/v${version}.tar.gz"
+checksum=SKIP
+
+post_install() {
+	vlicense LICENSE
+	vdoc README.md
+	vdoc assets/config.example.toml
+}

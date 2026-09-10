@@ -1,0 +1,168 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v0.2.0)'
+        required: true
+        default: 'v0.2.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64 (glibc)
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            use_cross: false
+
+          # Linux x86_64 (musl static - universal for Arch, Fedora, Debian, Void, Nix, Alpine)
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            use_cross: true
+
+          # Linux ARM64
+          - os: ubuntu-22.04
+            target: aarch64-unknown-linux-gnu
+            use_cross: true
+
+          # Windows x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use_cross: false
+
+          # Windows x86 (32-bit)
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            use_cross: false
+
+          # Windows ARM64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            use_cross: false
+
+          # macOS Intel & Apple Silicon
+          - os: macos-13
+            target: x86_64-apple-darwin
+            use_cross: false
+          - os: macos-14
+            target: aarch64-apple-darwin
+            use_cross: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tool
+        if: matrix.use_cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build release binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            cross build --release -p oride --target ${{ matrix.target }}
+          else
+            cargo build --release -p oride --target ${{ matrix.target }}
+          fi
+
+      - name: Package artifacts (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ -z "$TAG" ] || [[ ! "$TAG" =~ ^v ]]; then
+            TAG="${{ inputs.version || 'v0.2.0' }}"
+          fi
+          
+          STAGING="oride-${TAG}-${{ matrix.target }}"
+          mkdir -p "$STAGING"
+          
+          cp "target/${{ matrix.target }}/release/oride" "$STAGING/"
+          cp README.md LICENSE assets/config.example.toml "$STAGING/"
+          
+          tar -czf "${STAGING}.tar.gz" -C "$STAGING" .
+          echo "ASSET_PATH=${STAGING}.tar.gz" >> $GITHUB_ENV
+
+      - name: Build Debian package (.deb)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        shell: bash
+        run: |
+          chmod +x packaging/debian/build-deb.sh
+          ./packaging/debian/build-deb.sh target/${{ matrix.target }}/release/oride dist amd64
+          echo "DEB_PATH=dist/oride_0.2.0_amd64.deb" >> $GITHUB_ENV
+
+      - name: Package artifacts (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ -z "$TAG" ] || [[ ! "$TAG" =~ ^v ]]; then
+            TAG="${{ inputs.version || 'v0.2.0' }}"
+          fi
+          
+          STAGING="oride-${TAG}-${{ matrix.target }}"
+          mkdir -p "$STAGING"
+          
+          cp "target/${{ matrix.target }}/release/oride.exe" "$STAGING/"
+          cp README.md LICENSE assets/config.example.toml "$STAGING/"
+          
+          7z a "${STAGING}.zip" "./${STAGING}/*"
+          echo "ASSET_PATH=${STAGING}.zip" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            oride-*.tar.gz
+            oride-*.zip
+            dist/*.deb
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate Checksums
+        shell: bash
+        run: |
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/*
+          name: Oride ${{ github.ref_name || inputs.version || 'v0.2.0' }}
+          tag_name: ${{ github.ref_name || inputs.version || 'v0.2.0' }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false

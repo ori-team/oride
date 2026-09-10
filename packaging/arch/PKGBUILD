@@ -1,0 +1,46 @@
+# Maintainer: Ori Team <ori-lang@proton.me>
+pkgname=oride
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="Fast, modular and extensible terminal code editor and mini-IDE in Rust"
+arch=('x86_64' 'aarch64')
+url="https://github.com/ori-team/oride"
+license=('MIT')
+depends=('gcc-libs' 'glibc')
+makedepends=('cargo' 'git')
+optdepends=(
+    'rust-analyzer: LSP support for Rust'
+    'clang: LSP support for C/C++'
+    'bash-language-server: LSP support for Bash'
+    'ripgrep: Accelerated fast search in project'
+    'nerd-fonts: Rich file and folder icons in tree'
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/ori-team/oride/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+    cd "$pkgname-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+    cd "$pkgname-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release --all-features -p oride
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo test --frozen --all-features --workspace
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    install -Dm755 "target/release/oride" "$pkgdir/usr/bin/oride"
+    install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 "README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 "assets/config.example.toml" "$pkgdir/usr/share/doc/$pkgname/config.example.toml"
+}

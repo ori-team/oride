@@ -18,11 +18,31 @@ Documentation: [User Guide](docs/guides/en/user-guide.md) · [Architecture & Des
 - **Preview Links:** Open links in the system web browser via mouse click or `Alt+Enter`.
 - **Opt-in Mouse:** Disabled by default (`mouse = false`); when enabled, supports caret positioning, text selection by dragging, and split divider resizing.
 
-## Build & Run
+## Installation
+
+### Linux & macOS (One-Line Installer)
+```bash
+curl -fsSL https://raw.githubusercontent.com/ori-team/oride/main/scripts/install.sh | bash
+```
+*Automatically detects platform (x86_64, aarch64), downloads the official binary, installs to `~/.local/bin/oride`, and configures your shell PATH.*
+
+### Windows (PowerShell)
+```powershell
+irm https://raw.githubusercontent.com/ori-team/oride/main/scripts/install.ps1 | iex
+```
+*Automatically installs `oride.exe` to `$HOME\.oride\bin` and permanently configures your Windows User PATH.*
+
+### Distributions & Package Managers
+- **Debian / Ubuntu:** Download `.deb` from [Releases](https://github.com/ori-team/oride/releases) and install via `sudo dpkg -i oride_*.deb`.
+- **Arch Linux:** Install via [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) (`makepkg -si`) or pre-built `.pkg.tar.zst`.
+- **Fedora / RHEL:** Build RPM via [`packaging/fedora/oride.spec`](packaging/fedora/oride.spec).
+- **Void Linux:** Build package via [`packaging/void/template`](packaging/void/template).
+- **Nix / NixOS:** Run instantly via `nix run github:ori-team/oride` or install via `nix profile install github:ori-team/oride`.
+
+## Building from Source
 
 ```bash
 cargo build --release
-./scripts/install.sh                    # Installs to ~/.local/bin/oride
 ./target/release/oride                  # CWD as workspace + empty buffer
 ./target/release/oride path/to/file     # Open specific file
 ./target/release/oride path/to/dir      # Open directory as workspace
