@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "rules": [
+    "availability fallback",
+    "quality fallback after bounded failed attempts",
+    "targeted context expansion before broad re-read",
+    "cross-provider review for high-risk changes when possible",
+    "human escalation after fallback/budget exhaustion"
+  ],
+  "unbounded_retry": false,
+  "unbounded_recursion": false
+}

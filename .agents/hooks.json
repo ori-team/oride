@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "session.end": [
+      {
+        "exec": "atlas doctor --json",
+        "type": "command"
+      }
+    ],
+    "session.start": [
+      {
+        "exec": "atlas status --json",
+        "type": "command"
+      }
+    ],
+    "tool.after_execute": [
+      {
+        "check": "evidence_collection",
+        "type": "audit"
+      }
+    ],
+    "tool.before_execute": [
+      {
+        "check": "security_boundary",
+        "type": "audit"
+      }
+    ]
+  },
+  "version": "1.0"
+}

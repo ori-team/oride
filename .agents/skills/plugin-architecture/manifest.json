@@ -1,0 +1,25 @@
+{
+  "id": "plugin-architecture",
+  "name": "Plugin Architecture",
+  "version": 1,
+  "schema_version": 2,
+  "select": {
+    "features_any": [
+      "plugins",
+      "extensions"
+    ]
+  },
+  "purpose": "Build sandboxed extension points with versioned contracts and explicit permissions.",
+  "risk_level": "medium",
+  "modes": [
+    "design"
+  ],
+  "requires_any": [],
+  "tools": [],
+  "provenance": {
+    "source": "project-atlas-framework",
+    "version": "0.3.0",
+    "checksum": "",
+    "modified": "2026-08-14"
+  }
+}

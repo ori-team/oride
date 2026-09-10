@@ -1,0 +1,142 @@
+{
+  "generated_by": {
+    "project_atlas": "0.2.0"
+  },
+  "skills": [
+    "accessibility",
+    "architecture-quality",
+    "atlas-navigation",
+    "benchmarking",
+    "clang-context-indexing",
+    "clean-code",
+    "code-review",
+    "contrast",
+    "dependency-management",
+    "documentation",
+    "error-handling",
+    "git-workflow",
+    "goal-management",
+    "keyboard-accessibility",
+    "lang-bash",
+    "lang-c",
+    "lang-rust",
+    "lean-progressive-context",
+    "performance-native",
+    "plugin-architecture",
+    "plugin-security",
+    "project-intelligence",
+    "refactoring",
+    "release-engineering",
+    "rust-analyzer-context-indexing",
+    "secrets-security",
+    "secure-coding",
+    "security-review",
+    "supply-chain-security",
+    "testing-quality",
+    "threat-modeling"
+  ],
+  "reasons": {
+    "accessibility": [
+      "risk-rule:accessibility-risk"
+    ],
+    "architecture-quality": [
+      "core"
+    ],
+    "atlas-navigation": [
+      "core"
+    ],
+    "benchmarking": [
+      "risk",
+      "risk-rule:performance-risk"
+    ],
+    "clang-context-indexing": [
+      "stack"
+    ],
+    "clean-code": [
+      "bundle:cli",
+      "core"
+    ],
+    "code-review": [
+      "core"
+    ],
+    "contrast": [
+      "risk-rule:accessibility-risk"
+    ],
+    "dependency-management": [
+      "core"
+    ],
+    "documentation": [
+      "core"
+    ],
+    "error-handling": [
+      "bundle:cli",
+      "core"
+    ],
+    "git-workflow": [
+      "core"
+    ],
+    "goal-management": [
+      "core"
+    ],
+    "keyboard-accessibility": [
+      "risk-rule:accessibility-risk"
+    ],
+    "lang-bash": [
+      "stack"
+    ],
+    "lang-c": [
+      "stack"
+    ],
+    "lang-rust": [
+      "stack"
+    ],
+    "lean-progressive-context": [
+      "core"
+    ],
+    "performance-native": [
+      "risk",
+      "risk-rule:performance-risk"
+    ],
+    "plugin-architecture": [
+      "feature"
+    ],
+    "plugin-security": [
+      "feature"
+    ],
+    "project-intelligence": [
+      "core"
+    ],
+    "refactoring": [
+      "core"
+    ],
+    "release-engineering": [
+      "bundle:cli",
+      "core"
+    ],
+    "rust-analyzer-context-indexing": [
+      "stack"
+    ],
+    "secrets-security": [
+      "risk"
+    ],
+    "secure-coding": [
+      "risk",
+      "risk-rule:security-risk"
+    ],
+    "security-review": [
+      "risk",
+      "risk-rule:security-risk"
+    ],
+    "supply-chain-security": [
+      "risk"
+    ],
+    "testing-quality": [
+      "bundle:cli",
+      "core"
+    ],
+    "threat-modeling": [
+      "risk",
+      "risk-rule:security-risk"
+    ]
+  }
+}

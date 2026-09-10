@@ -1,0 +1,65 @@
+{
+  "id": "contrast",
+  "name": "Color Contrast Verification",
+  "version": 1,
+  "schema_version": 2,
+  "purpose": "Verify WCAG AA contrast ratios (4.5:1 text, 3:1 graphical elements).",
+  "risk_level": "low",
+  "modes": [
+    "testing"
+  ],
+  "inputs": [
+    "Product requirements",
+    "Design tokens",
+    "Wireframe / UI view"
+  ],
+  "outputs": [
+    "Design specification / findings",
+    "Accessibility audit scorecard",
+    "UI tests"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "capabilities": [
+    "filesystem.read",
+    "filesystem.write",
+    "process.spawn"
+  ],
+  "references": [],
+  "templates": [
+    "templates/wireframe-spec.md"
+  ],
+  "checks": [
+    "checks/contrast-checklist.md"
+  ],
+  "scripts": [],
+  "examples": [],
+  "required_evidence": [
+    "test",
+    "review"
+  ],
+  "stop_conditions": [
+    "Task acceptance criteria satisfied with evidence",
+    "Token budget exhausted",
+    "Blocked on external dependency"
+  ],
+  "provenance": {
+    "origin": "framework",
+    "license": "MIT",
+    "source": "project-atlas-framework",
+    "version": "0.3.0",
+    "checksum": "",
+    "modified": "2026-08-14"
+  },
+  "select": {
+    "features_any": [
+      "accessibility",
+      "ui"
+    ],
+    "risk_any": [
+      "accessibility"
+    ]
+  },
+  "requires_any": [],
+  "tools": []
+}

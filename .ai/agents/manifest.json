@@ -1,0 +1,53 @@
+{
+  "generated_by": {
+    "project_atlas": "0.2.0"
+  },
+  "agents": [
+    "architect",
+    "debugger",
+    "documentation-maintainer",
+    "explorer",
+    "implementer",
+    "release-verifier",
+    "reviewer",
+    "security-architect",
+    "security-reviewer",
+    "tester"
+  ],
+  "reasons": {
+    "architect": [
+      "core"
+    ],
+    "debugger": [
+      "core"
+    ],
+    "documentation-maintainer": [
+      "core"
+    ],
+    "explorer": [
+      "core"
+    ],
+    "implementer": [
+      "bundle:cli",
+      "core"
+    ],
+    "release-verifier": [
+      "bundle:cli",
+      "core"
+    ],
+    "reviewer": [
+      "bundle:cli",
+      "core"
+    ],
+    "security-architect": [
+      "risk"
+    ],
+    "security-reviewer": [
+      "risk"
+    ],
+    "tester": [
+      "bundle:cli",
+      "core"
+    ]
+  }
+}

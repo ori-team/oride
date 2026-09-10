@@ -6,3 +6,6 @@
 .DS_Store
 .oride/
 .mimocode/
+# Project Atlas derived/runtime state
+.atlas/runtime/
+.atlas/cache/

@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "primary": "atlas",
+  "protocol": "project-orchestration-protocol-v2",
+  "autonomy": "agentic",
+  "source_of_truth": "repository",
+  "context_methodology": "LPC"
+}

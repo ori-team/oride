@@ -1,0 +1,97 @@
+{
+  "context_aware_routing": true,
+  "cross_provider_review": true,
+  "roles": {
+    "architect": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "debugger": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "documentation-maintainer": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "implementer": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "release-verifier": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "reviewer": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "security-reviewer": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "tester": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "ux-reviewer": {
+      "fallback": [],
+      "preferred": [
+        "google/gemini-2.5-pro",
+        "anthropic/claude-3-7-sonnet",
+        "openai/gpt-4o"
+      ]
+    }
+  },
+  "roster": [
+    {
+      "enabled": true,
+      "id": "google/gemini-2.5-pro",
+      "provider": "google"
+    },
+    {
+      "enabled": true,
+      "id": "anthropic/claude-3-7-sonnet",
+      "provider": "anthropic"
+    },
+    {
+      "enabled": true,
+      "id": "openai/gpt-4o",
+      "provider": "openai"
+    }
+  ],
+  "selection_rule": "cheapest-reliable-model-that-passes-gates",
+  "version": 2
+}

@@ -1,0 +1,34 @@
+{
+  "generated_by": {
+    "project_atlas": "0.2.0"
+  },
+  "recipes": [
+    "documentation-refactor",
+    "feature-standard",
+    "release",
+    "security-review",
+    "ui-feature",
+    "ui-review"
+  ],
+  "reasons": {
+    "documentation-refactor": [
+      "skill-match"
+    ],
+    "feature-standard": [
+      "bundle:cli"
+    ],
+    "release": [
+      "bundle:cli"
+    ],
+    "security-review": [
+      "risk",
+      "risk-rule:security-risk"
+    ],
+    "ui-feature": [
+      "skill-match"
+    ],
+    "ui-review": [
+      "skill-match"
+    ]
+  }
+}

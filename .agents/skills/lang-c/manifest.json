@@ -1,0 +1,85 @@
+{
+  "id": "lang-c",
+  "name": "ISO C Bounded Systems & Safe Memory",
+  "version": 1,
+  "schema_version": 2,
+  "purpose": "Enforce ISO C (C11/C17/C23) bounded buffer discipline, explicit error checking, zero unbounded strings, and memory isolation.",
+  "risk_level": "critical",
+  "modes": [
+    "implementation",
+    "review",
+    "testing",
+    "audit"
+  ],
+  "inputs": [
+    "C source and header files",
+    "Build files (Makefile / CMake)",
+    "Active task acceptance criteria"
+  ],
+  "outputs": [
+    "Bounded and hardened C implementation",
+    "Sanitizer and Valgrind verification evidence",
+    "Unit test evidence"
+  ],
+  "requires": [
+    "clean-code",
+    "testing-quality",
+    "secure-coding"
+  ],
+  "conflicts": [],
+  "capabilities": [
+    "filesystem.read",
+    "filesystem.write",
+    "process.spawn"
+  ],
+  "references": [
+    "references/c-memory-safety.md"
+  ],
+  "templates": [
+    "templates/c-verification-report.md"
+  ],
+  "checks": [
+    "checks/bounded-apis.md"
+  ],
+  "scripts": [
+    "scripts/verify.sh"
+  ],
+  "examples": [
+    "examples/safe-buffer.c"
+  ],
+  "required_evidence": [
+    "test",
+    "build",
+    "lint",
+    "security-scan"
+  ],
+  "stop_conditions": [
+    "Task acceptance criteria satisfied with evidence",
+    "Zero compiler warnings with -Werror",
+    "Valgrind/ASan clean execution",
+    "Token budget exhausted",
+    "Blocked on external dependency"
+  ],
+  "provenance": {
+    "origin": "framework",
+    "license": "MIT",
+    "source": "project-atlas-framework",
+    "version": "0.4.0",
+    "checksum": "",
+    "modified": "2026-09-09"
+  },
+  "select": {
+    "stack_any": [
+      "c",
+      "c11",
+      "c17",
+      "c23",
+      "gcc",
+      "clang"
+    ]
+  },
+  "requires_any": [],
+  "tools": [
+    "check-escape-hatches"
+  ]
+}

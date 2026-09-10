@@ -1,0 +1,80 @@
+{
+  "id": "lang-rust",
+  "name": "Rust Safe-by-Default & Non-Lexical Lifetimes",
+  "version": 1,
+  "schema_version": 2,
+  "purpose": "Enforce safe Rust by default, non-lexical lifetimes, zero unhandled unwrap/expect in production, miri verification of unsafe boundaries, and clippy -D warnings.",
+  "risk_level": "critical",
+  "modes": [
+    "implementation",
+    "review",
+    "testing",
+    "audit"
+  ],
+  "inputs": [
+    "Source code",
+    "Project configuration",
+    "Task acceptance criteria"
+  ],
+  "outputs": [
+    "Hardened source code",
+    "Verification evidence",
+    "Test evidence"
+  ],
+  "requires": [
+    "clean-code",
+    "testing-quality"
+  ],
+  "conflicts": [],
+  "capabilities": [
+    "filesystem.read",
+    "filesystem.write",
+    "process.spawn"
+  ],
+  "references": [
+    "references/rust-safety-miri.md"
+  ],
+  "templates": [
+    "templates/rust-verification-report.md"
+  ],
+  "checks": [
+    "checks/rust-rules.md"
+  ],
+  "scripts": [
+    "scripts/verify.sh"
+  ],
+  "examples": [
+    "examples/safe_rust.rs"
+  ],
+  "required_evidence": [
+    "test",
+    "build",
+    "lint",
+    "security-scan"
+  ],
+  "stop_conditions": [
+    "Task acceptance criteria satisfied with evidence",
+    "cargo clippy -- -D warnings clean",
+    "Token budget exhausted"
+  ],
+  "provenance": {
+    "origin": "framework",
+    "license": "MIT",
+    "source": "project-atlas-framework",
+    "version": "0.4.0",
+    "checksum": "",
+    "modified": "2026-09-09"
+  },
+  "select": {
+    "stack_any": [
+      "rust",
+      "cargo",
+      "clippy",
+      "rustc"
+    ]
+  },
+  "requires_any": [],
+  "tools": [
+    "check-escape-hatches"
+  ]
+}

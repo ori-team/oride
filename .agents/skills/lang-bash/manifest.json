@@ -1,0 +1,77 @@
+{
+  "id": "lang-bash",
+  "name": "Bash Strict Defensive Engineering",
+  "version": 1,
+  "schema_version": 2,
+  "purpose": "Enforce Bash strict mode (set -euo pipefail), ShellCheck clean execution, explicit quoting of all parameter expansions, trap handlers for resource cleanup, and zero eval.",
+  "risk_level": "medium",
+  "modes": [
+    "implementation",
+    "review",
+    "testing"
+  ],
+  "inputs": [
+    "Source code",
+    "Project configuration",
+    "Task acceptance criteria"
+  ],
+  "outputs": [
+    "Hardened source code",
+    "Verification evidence",
+    "Test evidence"
+  ],
+  "requires": [
+    "clean-code",
+    "testing-quality"
+  ],
+  "conflicts": [],
+  "capabilities": [
+    "filesystem.read",
+    "filesystem.write",
+    "process.spawn"
+  ],
+  "references": [
+    "references/bash-defensive.md"
+  ],
+  "templates": [
+    "templates/bash-verification-report.md"
+  ],
+  "checks": [
+    "checks/bash-rules.md"
+  ],
+  "scripts": [
+    "scripts/verify.sh"
+  ],
+  "examples": [
+    "examples/safe_runner.sh"
+  ],
+  "required_evidence": [
+    "test",
+    "lint"
+  ],
+  "stop_conditions": [
+    "Task acceptance criteria satisfied with evidence",
+    "shellcheck clean with 0 warnings",
+    "Token budget exhausted"
+  ],
+  "provenance": {
+    "origin": "framework",
+    "license": "MIT",
+    "source": "project-atlas-framework",
+    "version": "0.4.0",
+    "checksum": "",
+    "modified": "2026-09-09"
+  },
+  "select": {
+    "stack_any": [
+      "bash",
+      "sh",
+      "shell",
+      "posix"
+    ]
+  },
+  "requires_any": [],
+  "tools": [
+    "check-escape-hatches"
+  ]
+}

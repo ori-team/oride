@@ -1,0 +1,64 @@
+{
+  "id": "secure-coding",
+  "name": "Secure Coding",
+  "version": 1,
+  "schema_version": 2,
+  "purpose": "Prevent vulnerabilities during implementation through safe idioms and input validation.",
+  "risk_level": "high",
+  "modes": [
+    "implementation",
+    "review"
+  ],
+  "inputs": [
+    "Security policy",
+    "Target codebase",
+    "Threat model"
+  ],
+  "outputs": [
+    "Security audit report",
+    "Vulnerability remediation patches",
+    "Security gate evidence"
+  ],
+  "requires": [],
+  "conflicts": [],
+  "capabilities": [
+    "filesystem.read",
+    "filesystem.write",
+    "process.spawn"
+  ],
+  "references": [],
+  "templates": [
+    "templates/secure-coding-report.md"
+  ],
+  "checks": [
+    "checks/secure-coding-checklist.md"
+  ],
+  "scripts": [],
+  "examples": [],
+  "required_evidence": [
+    "security-scan",
+    "test"
+  ],
+  "stop_conditions": [
+    "Task acceptance criteria satisfied with evidence",
+    "Token budget exhausted",
+    "Blocked on external dependency"
+  ],
+  "provenance": {
+    "origin": "framework",
+    "license": "MIT",
+    "source": "project-atlas-framework",
+    "version": "0.3.0",
+    "checksum": "",
+    "modified": "2026-08-14"
+  },
+  "select": {
+    "risk_any": [
+      "security",
+      "public-web",
+      "financial"
+    ]
+  },
+  "requires_any": [],
+  "tools": []
+}

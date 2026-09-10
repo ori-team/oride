@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+- **Project Atlas Framework v0.4.2:** Governança canônica do projeto via `atlas.json`, manifesto de orquestração e agentes em `.ai/`, rastreabilidade de estado em `PROJECT_STATE.md` e roteador em `ENTRYPOINT.md` e `docs/ATLAS.md`.
+- **Harness Google Antigravity:** Compilação nativa de regras e habilidades de workforce em `.agents/` via `atlas compile --target antigravity`.
+
 ## 0.2.0
 
 Release focada em linguagens first-class, visualização rica e mídia no Markdown, Git/SCM interativo com sincronização, busca com globs, persistência completa de sessão e consolidação multi-LSP.
